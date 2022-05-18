@@ -2,16 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PauseGameState : MonoBehaviour
+public class PauseGameState : GameState
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
+    public PauseGameState(GameStateManager gameStateManager) : base(gameStateManager) { }
+    public override void gameStateUpdate()
     {
         
     }

@@ -2,20 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayerManager: MonoBehaviour
+public class PlayerManager
 {
     public List<RealPlayer> realPlayers = new List<RealPlayer>();
     public List<AiPlayer> aiPlayers = new List<AiPlayer>();
-    public GameObject castlePrefab;
-
-    private void Start()
-    {
-        GameObject castle = Instantiate(castlePrefab, new Vector3(-8, 0, 0), Quaternion.identity);
-        RealPlayer player = new RealPlayer();
-        player.playerName = "mainPlayer";
-        player.castle = castle.GetComponent<Castle>();
-        realPlayers.Add(player);
-    }
     public void createTroopEvent(string playerName, string troopName)
     {
         foreach(RealPlayer player in realPlayers)
