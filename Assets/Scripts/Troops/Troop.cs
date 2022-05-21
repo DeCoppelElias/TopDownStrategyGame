@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Troop : MonoBehaviour
+public abstract class Troop : MonoBehaviour
 {
     public List<Vector2> path = new List<Vector2>();
-    public int speed;
+    protected int speed;
+    public Castle castle;
 
     public void updateTroop()
     {
@@ -22,5 +23,10 @@ public class Troop : MonoBehaviour
                 transform.position = Vector3.MoveTowards(transform.position, path[0], step);
             }
         }
+    }
+
+    public void setPath(List<Vector2> path)
+    {
+        this.path = new List<Vector2>(path);
     }
 }

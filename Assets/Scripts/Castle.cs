@@ -4,18 +4,20 @@ using UnityEngine;
 
 public class Castle : Entity
 {
-    public List<Troop> troops;
+    private List<Troop> troops = new List<Troop>();
     public GameObject swordManPrefab;
-    public Player player;
-    public void createTroop(string troopName, List<Vector2> path)
+    public Client client;
+    public GameObject createTroop(string troopName, List<Vector2> path, Castle castle)
     {
-        if(troopName == "swordMan")
+        if(troopName == "SwordManTroop")
         {
-            GameObject swordManGameObject = Instantiate(swordManPrefab, transform.position, Quaternion.identity);
-            SwordManTroop swordManTroop = swordManGameObject.GetComponent<SwordManTroop>();
-            swordManTroop.path = path;
-            troops.Add(swordManTroop);
+            GameObject swordManGameObject = SwordManTroop.createTroop(path, transform.position, swordManPrefab);
+            SwordManTroop swordMan = swordManGameObject.GetComponent<SwordManTroop>();
+            swordMan.castle = castle;
+            troops.Add(swordMan);
+            return swordManGameObject;
         }
+        return null;
     }
 
     public void updateTroops()

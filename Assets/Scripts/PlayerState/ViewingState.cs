@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ViewingState : PlayerState
+public class ViewingState : ClientState
 {
-    public ViewingState(PlayerStateManager p) : base(p) { }
+    public ViewingState(ClientStateManager p) : base(p) { }
     public override void action()
     {
         

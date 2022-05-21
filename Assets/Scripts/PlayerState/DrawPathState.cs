@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DrawPathState : PlayerState
+public class DrawPathState : ClientState
 {
     public List<Vector2> path = new List<Vector2>();
     public bool mouse = false;
 
-    public DrawPathState(PlayerStateManager p) : base(p) { }
+    public DrawPathState(ClientStateManager p) : base(p) { }
     public override void action()
     {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -16,7 +16,7 @@ public class DrawPathState : PlayerState
             if (Input.GetMouseButtonDown(0))
             {
                 Debug.Log("Starting to draw at position" + mousePosition);
-                Vector2 castlePosition = playerStateManager.getCastlePosition();
+                Vector2 castlePosition = clientStateManager.getCastlePosition();
                 if(Vector2.Distance(mousePosition,castlePosition) < 1)
                 {
                     mouse = true;
@@ -60,7 +60,7 @@ public class DrawPathState : PlayerState
             {
                 Debug.Log("Finished drawing");
                 mouse = false;
-                playerStateManager.sendPathToPlayer(path);
+                clientStateManager.sendPathToPlayer(path);
                 path = new List<Vector2>();
             }
         }
