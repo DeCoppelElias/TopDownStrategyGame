@@ -1,48 +1,142 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Mirror;
 
-public class Client : NetworkBehaviour
+public class Client : Player
 {
     public ClientStateManager clientStateManager;
     public enum GameState { Pause, Normal};
     public GameState gameState = GameState.Normal;
-    public GameObject castlePrefab;
-    public Castle castle;
+
     public string selectedTroop;
     public UiManager uiManager;
-    public GameObject levels;
+    public Player aiClient;
 
     public override void OnStartClient()
     {
         base.OnStartClient();
-        if (!isLocalPlayer) return;
-
-        this.name = "LocalClient";
-        this.uiManager = GameObject.Find("Canvas").GetComponent<UiManager>();
-        this.uiManager.setClient(this);
-        this.levels = GameObject.Find("Levels");
-        this.clientStateManager = new ClientStateManager(this);
-
-        if (GameObject.FindGameObjectsWithTag("client").Length == 1)
+        if (!isLocalPlayer)
         {
-            uiManager.activateSelectLevelUi(true);
+            this.transform.SetParent(GameObject.Find("Clients").transform);
+            return;
         }
 
-        //Find a castle for the new client and update other clients
-        clientsFindCastle();
-    }
+        this.name = "LocalClient";
+        this.clientStateManager = new ClientStateManager(this);
 
+        if (SceneManager.GetActiveScene().name == "MultiplayerScene" && isServer)
+        {
+            GameObject canvas = GameObject.Find("Canvas");
+            canvas.GetComponent<MultiplayerSceneUi>().selectLevelUi.SetActive(true);
+        }
+        else if (SceneManager.GetActiveScene().name != "MultiplayerScene")
+        {
+            this.uiManager = GameObject.Find("Canvas").GetComponent<UiManager>();
+            this.uiManager.setClient(this);
+
+            initLevel();
+
+            setupClientGameObjects();
+
+            findServerClient();
+
+            findCastleForClient(this.gameObject);
+        }
+    }
     private void Update()
     {
         if (!isLocalPlayer) return;
+        clientUpdate();
 
+        if (!isServer) return;
         if (gameState.Equals(GameState.Normal))
         {
-            clientStateManager.stateActions();
-            updateGame();
+            serverUpdate();
         }
+    }
+    
+    [Client]
+    public void displayGold(int gold)
+    {
+        if (!isLocalPlayer) return;
+        uiManager.displayGold(gold);
+    }
+
+
+    [Client]
+    public void setupClientGameObjects()
+    {
+        GameObject castles = GameObject.Find("Castles");
+        foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
+        {
+            castleGameObject.transform.SetParent(castles.transform);
+        }
+        GameObject clients = GameObject.Find("Clients");
+        foreach(GameObject clientGameObject in GameObject.FindGameObjectsWithTag("client"))
+        {
+            clientGameObject.transform.SetParent(clients.transform);
+        }
+    }
+
+    [Client]
+    public void dyeAndNameCastle(Castle castle)
+    {
+        if (castle.Owner == castle.ServerClient)
+        {
+            castle.gameObject.name = "LocalCastle";
+            GameObject.Find("Canvas").GetComponent<UiManager>().activateInGameUi(true);
+            float r = 88;  // red component
+            float g = 222;  // green component
+            float b = 255;  // blue component
+            castle.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (castle.Owner == aiClient)
+        {
+            castle.gameObject.name = "AiCastle";
+            float r = 95;  // red component
+            float g = 95;  // green component
+            float b = 95;  // blue component
+            castle.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (castle.Owner != null)
+        {
+            castle.gameObject.name = "EnemyCastle";
+            float r = 255;  // red component
+            float g = 95;  // green component
+            float b = 95;  // blue component
+            castle.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+    }
+
+    [Client]
+    public void initLevel()
+    {
+        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
+        level.initLevel();
+
+        if (isServer)
+        {
+            instantiateLevelServer();
+        }
+    }
+
+    [Client]
+    public void findServerClient()
+    {
+        Client client = GameObject.Find("LocalClient").GetComponent<Client>();
+        foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
+        {
+            Castle castle = castleGameObject.GetComponent<Castle>();
+            castle.ServerClient = client;
+        }
+    }
+
+    [Client]
+    public void clientUpdate()
+    {
+        clientStateManager.stateActions();
     }
 
     [Client]
@@ -65,18 +159,6 @@ public class Client : NetworkBehaviour
     }
 
     [Command]
-    public void updateGame()
-    {
-        serverUpdateGame();
-    }
-
-    [Command]
-    public void selectLevelEvent(int levelID)
-    {
-        instantiateLevel(levelID);
-    }
-
-    [Command]
     public void changeGameState(string gameState)
     {
         Debug.Log("Updating gamestate from " + this.gameState.ToString() + " to " + gameState);
@@ -86,49 +168,24 @@ public class Client : NetworkBehaviour
     [Command]
     public void createTroop(string troopName, List<Vector2> path)
     {
-        GameObject troop = this.castle.createTroop(troopName, path, this.castle);
-        updateTroopOnClients(this.castle.gameObject, troop);
+        this.castle.createTroop(troopName, path);
     }
 
     [Command]
-    public void clientsFindCastle()
+    public void findCastleForClient(GameObject clientGameObject)
     {
         GameObject castles = GameObject.Find("Castles");
-        foreach (Client client in FindObjectsOfType<Client>())
+        Client client = clientGameObject.GetComponent<Client>();
+        bool found = false;
+        foreach (Castle castle in castles.GetComponentsInChildren<Castle>())
         {
-            foreach (Castle castle in castles.GetComponentsInChildren<Castle>())
+            if ((castle.Owner == null || castle.Owner == aiClient) && !found)
             {
-                if (castle.client == null && client.castle == null)
-                {
-                    castle.client = client;
-                    client.castle = castle;
-                    updateCastleOnClients(client.gameObject, castle.gameObject);
-                }
+                found = true;
+                castle.Owner = client;
+                client.castle = castle;
             }
         }
-    }
-
-    [ClientRpc]
-    public void updateCastleOnClients(GameObject clientGameObject, GameObject castleGameObject)
-    {
-        Client client = clientGameObject.GetComponent<Client>();
-        Castle castle = castleGameObject.GetComponent<Castle>();
-        client.castle = castle;
-        castle.client = client;
-
-        GameObject localClient = GameObject.Find("LocalClient");
-        if (castle.client.Equals(localClient.GetComponent<Client>()))
-        {
-            castleGameObject.name = "localCastle";
-            GameObject.Find("Canvas").GetComponent<UiManager>().activateInGameUi(true);
-        }
-    }
-
-    [ClientRpc]
-    public void updateTroopOnClients(GameObject castle, GameObject troop)
-    {
-        troop.GetComponent<Troop>().castle = castle.GetComponent<Castle>();
-
     }
 
     [ClientRpc]
@@ -163,34 +220,34 @@ public class Client : NetworkBehaviour
     }
 
     [Server]
-    public void serverUpdateGame()
+    public void serverUpdate()
     {
-        foreach (Castle castle in GameObject.Find("Castles").GetComponentsInChildren<Castle>())
+        foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
         {
-            castle.updateTroops();
+            Castle currentCastle = castleGameObject.GetComponent<Castle>();
+            currentCastle.updateCastle();
         }
     }
 
     [Server]
-    public void instantiateLevel(int levelID)
+    public void instantiateLevelServer()
     {
-        Level level = GameObject.Find("Levels").transform.GetChild(levelID).GetComponent<Level>();
+        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
         NetworkManager networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         networkManager.maxConnections = level.maxPlayers;
-        foreach(Vector2 castleLocation in level.castleLocations)
+
+        foreach(Vector2 castlePosiiton in level.castlePositions)
         {
-            createCastle(castleLocation);
+            GameObject castle = Instantiate(level.castlePrefab, castlePosiiton, Quaternion.identity, GameObject.Find("Castles").transform);
+            NetworkServer.Spawn(castle);
         }
+        
         updateUiOnClients();
-        clientsFindCastle();
     }
 
     [Server]
-    public Castle createCastle(Vector2 castleLocation)
+    public void destoryObject(GameObject obj)
     {
-        GameObject castle = Instantiate(castlePrefab, castleLocation, Quaternion.identity, GameObject.Find("Castles").transform);
-        NetworkServer.Spawn(castle);
-
-        return castle.GetComponent<Castle>();
+        NetworkServer.Destroy(obj);
     }
 }

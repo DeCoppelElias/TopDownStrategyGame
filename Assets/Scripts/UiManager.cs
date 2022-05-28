@@ -1,43 +1,36 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class UiManager : MonoBehaviour
 {
     private Client client;
     private GameObject inGameUi;
-    private GameObject selectLevelUi;
+    private TextMeshProUGUI goldDisplay;
     void Start()
     {
         inGameUi = GameObject.Find("InGameUi");
+        goldDisplay = GameObject.Find("GoldDisplay").GetComponent<TextMeshProUGUI>();
         inGameUi.SetActive(false);
-        selectLevelUi = GameObject.Find("SelectLevelUi");
-        selectLevelUi.SetActive(false);
     }
 
-    public void activateSelectLevelUi(bool active)
+    public void displayGold(int gold)
     {
-        selectLevelUi.SetActive(active);
+        goldDisplay.text = gold.ToString();
     }
     public void activateInGameUi(bool active)
     {
         inGameUi.SetActive(active);
     }
 
-    public void selectLevelEvent(int level)
-    {
-        client.selectLevelEvent(level);
-        activateSelectLevelUi(false);
-        activateInGameUi(true);
-    }
-
     public void setClient(Client client)
     {
         this.client = client;
     }
-    public void createSwordMan()
+    public void createTroop(string troopName)
     {
-        client.createTroopEvent("SwordManTroop");
+        client.createTroopEvent(troopName);
     }
 
     public void pauseGame()

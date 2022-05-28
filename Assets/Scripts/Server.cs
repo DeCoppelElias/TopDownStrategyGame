@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
 using UnityEngine.UI;
+using TMPro;
+
 public class Server : MonoBehaviour
 {
     private NetworkManager networkManager;
-    public InputField ip_inputField;
-    public GameObject serverUi;
+    public TMP_InputField ip_inputField;
     private void Awake()
     {
         networkManager = this.GetComponent<NetworkManager>();
@@ -16,15 +17,11 @@ public class Server : MonoBehaviour
     public void host()
     {
         networkManager.StartHost();
-
-        serverUi.SetActive(false);
     }
 
     public void connect()
     {
         networkManager.networkAddress = ip_inputField.text;
         networkManager.StartClient();
-
-        serverUi.SetActive(false);
     }
 }

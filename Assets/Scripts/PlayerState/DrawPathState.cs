@@ -45,7 +45,6 @@ public class DrawPathState : ClientState
                     }
                     if (valid)
                     {
-                        Debug.Log("Added position" + mousePosition);
                         path.Add(mousePosition);
                     }
                     else
@@ -58,10 +57,29 @@ public class DrawPathState : ClientState
             }
             else
             {
-                Debug.Log("Finished drawing");
-                mouse = false;
-                clientStateManager.sendPathToPlayer(path);
-                path = new List<Vector2>();
+                bool found = false;
+                foreach(Collider2D collider in Physics2D.OverlapCircleAll(mousePosition, 1))
+                {
+                    Castle castle = collider.GetComponent<Castle>();
+                    if (castle && castle.Owner != this.clientStateManager.client)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                {
+                    Debug.Log("Finished drawing");
+                    mouse = false;
+                    clientStateManager.sendPathToPlayer(path);
+                    path = new List<Vector2>();
+                }
+                else
+                {
+                    Debug.Log("Path must end with an enemy castle");
+                    mouse = false;
+                    path = new List<Vector2>();
+                }
             }
         }
     }
