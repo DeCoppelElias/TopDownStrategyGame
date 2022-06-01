@@ -257,6 +257,18 @@ public class Client : Player
         GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateInGameUi();
     }
 
+    [ClientRpc]
+    private void endGame()
+    {
+        GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateEndUi();
+    }
+
+    [TargetRpc]
+    public void clientCastleDestroyed(NetworkConnection networkConnection)
+    {
+        GameObject.Find("Canvas").GetComponent<LevelSceneUi>().disableAllUi();
+    }
+
     /// <summary>
     /// Will update the server
     /// </summary>
@@ -324,5 +336,21 @@ public class Client : Player
     public void destoryObject(GameObject obj)
     {
         NetworkServer.Destroy(obj);
+    }
+
+    [Server]
+    public void checkGameDoneAfterDelay()
+    {
+        Invoke("checkGameDone", 0.5f);
+    }
+
+    private void checkGameDone()
+    {
+        Debug.Log("checking if game is done");
+        if (GameObject.FindGameObjectsWithTag("castle").Length == 1)
+        {
+            Debug.Log("game is finished!");
+            endGame();
+        }
     }
 }

@@ -103,7 +103,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  _health: 50
+  _health: 100
   _owner: {fileID: 0}
   _serverClient: {fileID: 0}
   _damage: 10

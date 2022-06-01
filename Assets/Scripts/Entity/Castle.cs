@@ -114,7 +114,13 @@ public class Castle : AttackingEntity
             this.ServerClient.destoryObject(troop.gameObject);
         }
         GetComponent<BoxCollider2D>().isTrigger = false;
+        if (this.Owner is Client client)
+        {
+            NetworkIdentity opponentIdentity = client.GetComponent<NetworkIdentity>();
+            client.clientCastleDestroyed(opponentIdentity.connectionToClient);
+        }
         this.ServerClient.destoryObject(this.gameObject);
+        this.ServerClient.checkGameDoneAfterDelay();
     }
 
     /// <summary>

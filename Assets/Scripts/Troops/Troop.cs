@@ -157,7 +157,7 @@ public abstract class Troop : AttackingEntity
 
     public void dyeAndNameTroop()
     {
-        if (this.Owner == GameObject.Find("LocalClient").GetComponent<Client>())
+        if (GameObject.Find("LocalClient") && this.Owner == GameObject.Find("LocalClient").GetComponent<Client>())
         {
             this.name = "Local" + this.name;
             GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateInGameUi();
