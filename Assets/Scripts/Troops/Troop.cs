@@ -6,21 +6,22 @@ public abstract class Troop : AttackingEntity
 {
     [SerializeField]
     private List<Vector2> _path = new List<Vector2>();
-    [SyncVar]
-    protected List<Entity> _targetsToFollow = new List<Entity>();
     public List<Vector2> Path
     {
         set => _path = value;
     }
+    [SyncVar]
+    protected List<Entity> _targetsToFollow = new List<Entity>();
 
     [SerializeField]
-    private int _speed;
+    private float _speed;
 
     [SerializeField]
     private int _cost;
     public int Cost { 
         get => _cost;
     }
+
 
     /// <summary>
     /// This will update a troop, it will make the troop attack, follow or continue on his path
@@ -57,14 +58,36 @@ public abstract class Troop : AttackingEntity
         }
         if (_entityState.Equals(EntityState.Attacking))
         {
-            if(Time.time - _lastAttack > _cooldown)
-            {
-                attackEntity(_currentTarget);
-            }
-            if(_currentTarget == null || _currentTarget.Health <= 0)
-            {
-                killTarget();
-            }
+            attackTarget();
+        }
+    }
+
+    protected override void killTarget()
+    {
+        _entityState = EntityState.Normal;
+        Debug.Log("Killing target: " + this._currentTarget);
+        this._targetsToAttack.Remove(this._currentTarget);
+        this._targetsToFollow.Remove(this._currentTarget);
+        this._currentTarget.getKilled();
+        this._currentTarget = null;
+    }
+
+    protected override void searchNewTarget()
+    {
+        if (_targetsToFollow.Count == 0 && _targetsToAttack.Count == 0)
+        {
+            _currentTarget = null;
+            _entityState = AttackingEntity.EntityState.Normal;
+        }
+        else if (_targetsToAttack.Count > 0)
+        {
+            _currentTarget = _targetsToAttack[0];
+            _entityState = AttackingEntity.EntityState.Attacking;
+        }
+        else if (_targetsToFollow.Count > 0)
+        {
+            _currentTarget = _targetsToFollow[0];
+            _entityState = AttackingEntity.EntityState.WalkingToTarget;
         }
     }
 
@@ -86,23 +109,29 @@ public abstract class Troop : AttackingEntity
     /// </summary>
     /// <param name="oldClient"></param> The old owner client, should always be null
     /// <param name="newClient"></param> The new owner client
-    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient) { }
+    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient)
+    {
+        Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
+        dyeAndNameTroop();
+    }
 
     /// <summary>
     /// This method is called when a new collision enters the Detect Ring
     /// </summary>
     /// <param name="collision"></param>
     public void onEnterDetect(Collider2D collision)
-    {;
+    {
+        if (this._owner is Client client && !client.clientIsServer()) return;
         Entity entity = collision.GetComponent<Entity>();
         if (entity && _serverClient && entity.ServerClient && _owner != entity.Owner)
         {
+            //Debug.Log("adding to targets to follow: " + entity);
             this._targetsToFollow.Add(entity);
             if (_currentTarget == null)
             {
                 _currentTarget = entity;
                 _entityState = AttackingEntity.EntityState.WalkingToTarget;
-                Debug.Log(this + " follows " + _currentTarget);
+                //Debug.Log(this + " follows " + _currentTarget);
             }
         }
     }
@@ -113,22 +142,53 @@ public abstract class Troop : AttackingEntity
     /// <param name="collision"></param>
     public void onExitDetect(Collider2D collision)
     {
+        if (this._owner is Client client && !client.clientIsServer()) return;
         Entity entity = collision.GetComponent<Entity>();
-        if (entity && _serverClient && entity.ServerClient && _currentTarget == entity && entity.Owner != _owner)
+        if (entity && _serverClient && entity.ServerClient && entity.Owner != _owner)
         {
+            //Debug.Log("removing from targets to follow: " + entity);
             _targetsToFollow.Remove(entity);
-            if (_targetsToFollow.Count == 0)
+            if (_currentTarget == entity)
             {
-                _currentTarget = null;
-                _entityState = AttackingEntity.EntityState.Normal;
-                Debug.Log(this + " has lost sight of " + entity);
+                searchNewTarget();
             }
-            else if (_currentTarget == entity && _targetsToFollow.Count > 0)
-            {
-                _currentTarget = _targetsToFollow[0];
-                _entityState = AttackingEntity.EntityState.WalkingToTarget;
-                Debug.Log(this + " follows " + _currentTarget);
-            }
+        }
+    }
+
+    public void dyeAndNameTroop()
+    {
+        if (this.Owner == GameObject.Find("LocalClient").GetComponent<Client>())
+        {
+            this.name = "Local" + this.name;
+            GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateInGameUi();
+            float r = 88;  // red component
+            float g = 222;  // green component
+            float b = 255;  // blue component
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (this.Owner is AiClient)
+        {
+            this.name = "Ai" + this.name;
+            float r = 95;  // red component
+            float g = 95;  // green component
+            float b = 95;  // blue component
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (this.Owner != null)
+        {
+            this.name = "Enemy" + this.name;
+            float r = 255;  // red component
+            float g = 95;  // green component
+            float b = 95;  // blue component
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (this.Owner == null)
+        {
+            this.name = "Lost" + this.name;
+            float r = 255;  // red component
+            float g = 255;  // green component
+            float b = 255;  // blue component
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
         }
     }
 }

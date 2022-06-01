@@ -86,6 +86,7 @@ public class Castle : AttackingEntity
         troop.ServerClient = this.ServerClient;
         _troops.Add(troop);
         this._gold -= cost;
+        troop.dyeAndNameTroop();
         NetworkServer.Spawn(gameObject);
     }
 
@@ -112,7 +113,7 @@ public class Castle : AttackingEntity
         {
             this.ServerClient.destoryObject(troop.gameObject);
         }
-
+        GetComponent<BoxCollider2D>().isTrigger = false;
         this.ServerClient.destoryObject(this.gameObject);
     }
 
@@ -125,7 +126,7 @@ public class Castle : AttackingEntity
         gainGold();
         if (_entityState.Equals(EntityState.Attacking))
         {
-            castleAttack();
+            attackTarget();
         }
     }
 
@@ -144,30 +145,58 @@ public class Castle : AttackingEntity
     }
 
     /// <summary>
-    /// This method is called to attack the current target
+    /// Method for global operations when the owner client is changed
     /// </summary>
-    private void castleAttack()
+    /// <param name="oldClient"></param> The old owner client
+    /// <param name="newClient"></param> The new owner client
+    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient)
     {
-        if (Time.time - _lastAttack > _cooldown)
+        Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
+        dyeAndNameCastle();
+        if (this.Owner is Client client)
         {
-            attackEntity(_currentTarget);
-        }
-        if (_currentTarget == null || _currentTarget.Health <= 0)
-        {
-            killTarget();
+            client.displayGold(this._gold);
         }
     }
 
     /// <summary>
-    /// Method for global operations when the owner client is changed
+    /// Will dye and name a castle depending on their owner
     /// </summary>
-    /// <param name="oldClient"></param> The old owner client, should always be null
-    /// <param name="newClient"></param> The new owner client
-    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient)
+    /// <param name="this"></param>
+    public void dyeAndNameCastle()
     {
-        if(this.Owner is Client client)
+        if (this.Owner == this.ServerClient)
         {
-            client.dyeAndNameCastle(this);
+            this.gameObject.name = "LocalCastle";
+            GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateInGameUi();
+            float r = 88;  // red component
+            float g = 222;  // green component
+            float b = 255;  // blue component
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (this.Owner is AiClient)
+        {
+            this.gameObject.name = "AiCastle";
+            float r = 95;  // red component
+            float g = 95;  // green component
+            float b = 95;  // blue component
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (this.Owner != null)
+        {
+            this.gameObject.name = "EnemyCastle";
+            float r = 255;  // red component
+            float g = 95;  // green component
+            float b = 95;  // blue component
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+        else if (this.Owner == null)
+        {
+            this.gameObject.name = "EmptyCastle";
+            float r = 255;  // red component
+            float g = 255;  // green component
+            float b = 255;  // blue component
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
         }
     }
 

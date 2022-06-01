@@ -103,19 +103,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  health: 100
-  ownerClient: {fileID: 0}
-  serverClient: {fileID: 0}
-  damage: 10
-  entityState: 0
-  cooldown: 1
-  lastAttack: 0
-  currentTarget: {fileID: 0}
-  targetsToAttack: []
-  targetsToFollow: []
-  path: []
-  speed: 2
-  cost: 1
+  _health: 50
+  _owner: {fileID: 0}
+  _serverClient: {fileID: 0}
+  _damage: 10
+  _entityState: 0
+  _cooldown: 1
+  _lastAttack: 0
+  _currentTarget: {fileID: 0}
+  _targetsToAttack: []
+  _path: []
+  _speed: 10
+  _cost: 1
 --- !u!114 &-4299470591407226631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,6 +316,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afa4a192e77cf1941b3b6034630a77b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
 --- !u!50 &8957915463572741068
 Rigidbody2D:
   serializedVersion: 4
@@ -451,6 +452,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dacd89aa6d4fcf40a6c5d37c8a6f32a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
 --- !u!50 &2206557296512677486
 Rigidbody2D:
   serializedVersion: 4

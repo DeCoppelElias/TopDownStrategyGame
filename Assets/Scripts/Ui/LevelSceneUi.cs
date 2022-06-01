@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-public class UiManager : MonoBehaviour
+public class LevelSceneUi : MonoBehaviour
 {
     private Client client;
     private GameObject inGameUi;
+    private GameObject optionsUi;
     private TextMeshProUGUI goldDisplay;
     void Start()
     {
         inGameUi = GameObject.Find("InGameUi");
         goldDisplay = GameObject.Find("GoldDisplay").GetComponent<TextMeshProUGUI>();
+        optionsUi = GameObject.Find("OptionsUi");
+        optionsUi.SetActive(false);
         inGameUi.SetActive(false);
     }
 
@@ -19,9 +22,18 @@ public class UiManager : MonoBehaviour
     {
         goldDisplay.text = gold.ToString();
     }
-    public void activateInGameUi(bool active)
+    public void activateInGameUi()
     {
-        inGameUi.SetActive(active);
+        client.changeGameState("Normal");
+        optionsUi.SetActive(false);
+        inGameUi.SetActive(true);
+    }
+
+    public void activateOptionsUi()
+    {
+        client.changeGameState("Pause");
+        optionsUi.SetActive(true);
+        inGameUi.SetActive(false);
     }
 
     public void setClient(Client client)
@@ -41,5 +53,10 @@ public class UiManager : MonoBehaviour
     public void unPauseGame()
     {
         client.changeGameState("Normal");
+    }
+
+    public void clientLeave()
+    {
+        client.leaveGame();
     }
 }

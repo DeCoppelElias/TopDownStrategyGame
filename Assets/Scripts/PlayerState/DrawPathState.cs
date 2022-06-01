@@ -4,10 +4,14 @@ using UnityEngine;
 
 public class DrawPathState : ClientState
 {
-    public List<Vector2> path = new List<Vector2>();
-    public bool mouse = false;
+    private List<Vector2> path = new List<Vector2>();
+    private bool mouse = false;
 
     public DrawPathState(ClientStateManager p) : base(p) { }
+
+    /// <summary>
+    /// In the DrawPathState this method will store a path made with the mouse
+    /// </summary>
     public override void action()
     {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);

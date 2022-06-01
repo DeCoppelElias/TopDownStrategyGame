@@ -215,16 +215,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  _health: 100
+  _health: 500
   _owner: {fileID: 0}
   _serverClient: {fileID: 0}
   _swordManPrefab: {fileID: 4126093103633489819, guid: 9be703866cf81a34c84271ae079e85da, type: 3}
   _horseRiderPrefab: {fileID: 2107320505120169970, guid: 1c8ebeda76cc70040a360ace0868c58e, type: 3}
   _archerPrefab: {fileID: 6036157826243714297, guid: 016d325ad91b005489bc58df3979041e, type: 3}
   _troops: []
-  _gold: 1
+  _gold: 2
   _goldGain: 1
-  _goldCooldown: 4
+  _goldCooldown: 8
   _lastgoldGain: 0
 --- !u!114 &202833368633789879
 MonoBehaviour:

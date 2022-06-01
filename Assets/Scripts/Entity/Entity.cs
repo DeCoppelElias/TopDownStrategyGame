@@ -40,11 +40,10 @@ public abstract class Entity : NetworkBehaviour
     /// <summary>
     /// Method for global operations when the owner client is changed
     /// </summary>
-    /// <param name="oldClient"></param> The old owner client, should always be null
+    /// <param name="oldClient"></param> The old owner client
     /// <param name="newClient"></param> The new owner client
     public void updateOwnerClientEvent(Player oldClient, Player newClient)
     {
-        if(oldClient != null) throw new System.Exception("oldClient must be null, a client cannot be replaced");
         updateOwnerClientEventSpecific(oldClient,newClient);
     }
 

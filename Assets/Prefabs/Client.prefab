@@ -63,8 +63,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  gameState: 1
   castle: {fileID: 0}
+  gameState: 0
   selectedTroop: 
-  uiManager: {fileID: 0}
   aiClient: {fileID: -8745308214775816248, guid: de740b0a92fae7648b4b7c2a9a6eda33, type: 3}

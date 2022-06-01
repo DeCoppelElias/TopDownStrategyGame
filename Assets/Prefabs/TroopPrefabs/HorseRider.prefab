@@ -191,19 +191,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  health: 75
-  ownerClient: {fileID: 0}
-  serverClient: {fileID: 0}
-  damage: 10
-  entityState: 0
-  cooldown: 1
-  lastAttack: 0
-  currentTarget: {fileID: 0}
-  targetsToAttack: []
-  targetsToFollow: []
-  path: []
-  speed: 3
-  cost: 2
+  _health: 100
+  _owner: {fileID: 0}
+  _serverClient: {fileID: 0}
+  _path: []
+  _speed: 2.5
+  _cost: 2
 --- !u!1 &6555979022760627330
 GameObject:
   m_ObjectHideFlags: 0
@@ -317,6 +310,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9dacd89aa6d4fcf40a6c5d37c8a6f32a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
 --- !u!50 &4243273959035500039
 Rigidbody2D:
   serializedVersion: 4
@@ -451,6 +446,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: afa4a192e77cf1941b3b6034630a77b9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
 --- !u!50 &6353611107272072101
 Rigidbody2D:
   serializedVersion: 4

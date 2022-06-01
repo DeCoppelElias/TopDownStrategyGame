@@ -5,8 +5,12 @@ using Mirror;
 
 public class MultiplayerSceneUi : NetworkBehaviour
 {
+    [SerializeField]
     private NetworkManager networkManager;
-    public GameObject selectLevelUi;
+    [SerializeField]
+    private GameObject selectLevelUi;
+    [SerializeField]
+    private Client client;
 
     private void Start()
     {
@@ -16,7 +20,23 @@ public class MultiplayerSceneUi : NetworkBehaviour
     }
     public void selectLevel(int level)
     {
+        GameObject.Find("LocalClient").GetComponent<Client>().changeGameState("Normal");
         string levelString = "level-" + level;
         networkManager.ServerChangeScene(levelString);
+    }
+
+    public void activateSelectLevelUi()
+    {
+        selectLevelUi.SetActive(true);
+    }
+
+    public void leaveGame()
+    {
+        client.leaveGame();
+    }
+
+    public void setClient(Client client)
+    {
+        this.client = client;
     }
 }
