@@ -6,6 +6,12 @@ using Mirror;
 public class Castle : AttackingEntity
 {
     [SerializeField]
+    private GameObject _archerTowerPrefab;
+    [SerializeField]
+    private GameObject _cannonTowerPrefab;
+    [SerializeField]
+    private GameObject _meleeTowerPrefab;
+    [SerializeField]
     private GameObject _swordManPrefab;
     [SerializeField]
     private GameObject _horseRiderPrefab;
@@ -13,14 +19,23 @@ public class Castle : AttackingEntity
     private GameObject _archerPrefab;
     [SerializeField]
     private List<Troop> _troops = new List<Troop>();
+    [SerializeField]
+    private List<Tower> _towers = new List<Tower>();
     [SyncVar(hook = nameof(displayGold))][SerializeField]
     private int _gold = 1;
+    [SerializeField]
+    private int buildRange = 20;
     [SerializeField]
     private int _goldGain = 1;
     [SerializeField]
     private float _goldCooldown = 4;
     [SerializeField]
     private float _lastgoldGain = 0;
+
+    private void Start()
+    {
+        _lastgoldGain = Time.time;
+    }
 
     /// <summary>
     /// This method removes a troop from his castle, this means that the troop will no longer be updated
@@ -30,6 +45,51 @@ public class Castle : AttackingEntity
     {
         if (troop.Owner != this.Owner) throw new System.Exception("You are trying to remove a troop from a castle it doesn't belong to");
         this._troops.Remove(troop);
+    }
+
+    public void removeTower(Tower tower)
+    {
+        if (tower.Owner != this.Owner) throw new System.Exception("You are trying to remove a troop from a castle it doesn't belong to");
+        this._towers.Remove(tower);
+    }
+
+    public void createTower(string towerName, Vector2 spawnPosition)
+    {
+        if (Vector2.Distance(this.transform.position, spawnPosition) > buildRange)
+        {
+            Debug.Log("Building that far away from your castle is not allowed");
+            return;
+        }
+        int cost = 0;
+        GameObject prefab = null;
+        if (towerName == "ArcherTower")
+        {
+            cost = _archerTowerPrefab.GetComponent<Tower>().Cost;
+            prefab = _archerTowerPrefab;
+        }
+        else if (towerName == "CannonTower")
+        {
+            cost = _cannonTowerPrefab.GetComponent<Tower>().Cost;
+            prefab = _cannonTowerPrefab;
+        }
+        else if (towerName == "MeleeTower")
+        {
+            cost = _meleeTowerPrefab.GetComponent<Tower>().Cost;
+            prefab = _meleeTowerPrefab;
+        }
+        else
+        {
+            throw new System.Exception("Tower: " + towerName + " doesn't exist");
+        }
+
+        if (this._gold >= cost && prefab)
+        {
+            createTower(prefab, cost, spawnPosition);
+        }
+        else
+        {
+            Debug.Log("Not enough gold, this tower costs: " + cost);
+        }
     }
 
     /// <summary>
@@ -90,6 +150,18 @@ public class Castle : AttackingEntity
         NetworkServer.Spawn(gameObject);
     }
 
+    private void createTower(GameObject prefab, int cost, Vector2 spawnPosition)
+    {
+        GameObject gameObject = Instantiate(prefab, spawnPosition, Quaternion.identity);
+        Tower tower = gameObject.GetComponent<Tower>();
+        tower.Owner = this.Owner;
+        tower.ServerClient = this.ServerClient;
+        _towers.Add(tower);
+        this._gold -= cost;
+        tower.dyeAndNameTower();
+        NetworkServer.Spawn(gameObject);
+    }
+
     /// <summary>
     /// This method will display the gold of the castle on the computer, works only if this is the local castle
     /// </summary>
@@ -129,6 +201,7 @@ public class Castle : AttackingEntity
     public void updateCastle()
     {
         updateTroops();
+        updateTowers();
         gainGold();
         if (_entityState.Equals(EntityState.Attacking))
         {
@@ -179,6 +252,7 @@ public class Castle : AttackingEntity
             float g = 222;  // green component
             float b = 255;  // blue component
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
         }
         else if (this.Owner is AiClient)
         {
@@ -187,6 +261,7 @@ public class Castle : AttackingEntity
             float g = 95;  // green component
             float b = 95;  // blue component
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
         }
         else if (this.Owner != null)
         {
@@ -195,6 +270,7 @@ public class Castle : AttackingEntity
             float g = 95;  // green component
             float b = 95;  // blue component
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
         }
         else if (this.Owner == null)
         {
@@ -203,6 +279,15 @@ public class Castle : AttackingEntity
             float g = 255;  // green component
             float b = 255;  // blue component
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+        }
+    }
+
+    private void updateTowers()
+    {
+        foreach (Tower tower in _towers)
+        {
+            tower.updateTower();
         }
     }
 

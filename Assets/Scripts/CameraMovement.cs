@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class CameraMovement : MonoBehaviour
 {
@@ -47,11 +48,13 @@ public class CameraMovement : MonoBehaviour
                 transform.position = new Vector3(Mathf.Clamp(transform.position.x, -cameraMax_x, cameraMax_x), Mathf.Clamp(transform.position.y, -cameraMax_y, cameraMax_y), transform.position.z);
             }
 
-
-            float scrollData = Input.GetAxis("Mouse ScrollWheel");
-            targetZoom -= scrollData * zoomFactor;
-            targetZoom = Mathf.Clamp(targetZoom, 4.5f, 15f);
-            mainCamera.orthographicSize = Mathf.Lerp(mainCamera.orthographicSize, targetZoom, Time.deltaTime * lerpSpeed);
+            if (!EventSystem.current.IsPointerOverGameObject())
+            {
+                float scrollData = Input.GetAxis("Mouse ScrollWheel");
+                targetZoom -= scrollData * zoomFactor;
+                targetZoom = Mathf.Clamp(targetZoom, 4.5f, 15f);
+                mainCamera.orthographicSize = Mathf.Lerp(mainCamera.orthographicSize, targetZoom, Time.deltaTime * lerpSpeed);
+            }
         }
     }
 

@@ -21,4 +21,15 @@ public class MainSceneUi : NetworkBehaviour
         hostMultiplayerUi.SetActive(true);
         mainScreenUi.SetActive(false);
     }
+
+    public void backToMainMenu()
+    {
+        hostMultiplayerUi.SetActive(false);
+        mainScreenUi.SetActive(true);
+    }
+
+    public void exitGame()
+    {
+        Application.Quit();
+    }
 }

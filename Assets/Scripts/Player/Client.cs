@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Mirror;
+using System;
 
 public class Client : Player
 {
@@ -12,6 +13,8 @@ public class Client : Player
     private GameState gameState = GameState.Pause;
     [SerializeField]
     private string selectedTroop;
+    [SerializeField]
+    private string selectedTower;
     private LevelSceneUi uiManager;
     [SerializeField]
     private Player aiClient;
@@ -26,7 +29,6 @@ public class Client : Player
         }
 
         this.name = "LocalClient";
-        this.clientStateManager = new ClientStateManager(this);
 
         if (SceneManager.GetActiveScene().name == "MultiplayerScene")
         {
@@ -39,6 +41,8 @@ public class Client : Player
         }
         else if (SceneManager.GetActiveScene().name != "MultiplayerScene")
         {
+            this.clientStateManager = new ClientStateManager(this);
+
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
             this.uiManager.setClient(this);
 
@@ -167,6 +171,13 @@ public class Client : Player
         }
     }
 
+    [Client]
+    public void createTowerEvent(string towerName)
+    {
+        selectedTower = towerName;
+        changeClientState("SelectPositionState");
+    }
+
     /// <summary>
     /// Will handle the event of troop creation
     /// </summary>
@@ -175,7 +186,18 @@ public class Client : Player
     public void createTroopEvent(string troopName)
     {
         selectedTroop = troopName;
-        clientStateManager.changeState("DrawPathState");
+    }
+
+    [Client]
+    public void changeToSelectState(string target)
+    {
+        this.clientStateManager.changeState("SelectEntityState", target);
+    }
+
+    [Client]
+    public void changeClientState(string state)
+    {
+        this.clientStateManager.changeState(state);
     }
 
     /// <summary>
@@ -186,6 +208,48 @@ public class Client : Player
     public void createSelectedTroop(List<Vector2> path)
     {
         createTroop(selectedTroop, path);
+    }
+
+    /// <summary>
+    /// Will create the troop that was selected with createTroopEvent()
+    /// </summary>
+    /// <param name="path"></param> The path that the troop will take
+    [Client]
+    public void createSelectedTroop(Entity target)
+    {
+        if(target is Castle castle)
+        {
+            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+            List<Vector3> path = pathFinding.findPath(Vector3Int.FloorToInt(this.castle.transform.position), Vector3Int.FloorToInt(castle.transform.position));
+            List<Vector2> result = new List<Vector2>();
+            foreach(Vector3 position in path)
+            {
+                result.Add(position);
+            }
+            createTroop(selectedTroop, result);
+        }
+        if(target is Troop troop)
+        {
+            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+            List<Vector3> path = pathFinding.findPath(Vector3Int.FloorToInt(this.castle.transform.position), Vector3Int.FloorToInt(troop.transform.position));
+            List<Vector3> path2 = pathFinding.findPath(Vector3Int.FloorToInt(troop.transform.position), Vector3Int.FloorToInt(troop.Owner.castle.transform.position));
+            List<Vector2> result = new List<Vector2>();
+            foreach (Vector3 position in path)
+            {
+                result.Add(position);
+            }
+            foreach (Vector3 position in path2)
+            {
+                result.Add(position);
+            }
+            createTroop(selectedTroop, result);
+        }
+    }
+
+    [Client]
+    public void createSelectedTower(Vector2 position)
+    {
+        createTower(selectedTower, position);
     }
 
     /// <summary>
@@ -225,6 +289,12 @@ public class Client : Player
     private void createTroop(string troopName, List<Vector2> path)
     {
         this.castle.createTroop(troopName, path);
+    }
+
+    [Command]
+    private void createTower(string towerName, Vector2 position)
+    {
+        this.castle.createTower(towerName, position);
     }
 
     /// <summary>
