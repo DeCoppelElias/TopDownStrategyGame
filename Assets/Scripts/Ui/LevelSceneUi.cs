@@ -12,11 +12,12 @@ public class LevelSceneUi : MonoBehaviour
     private GameObject optionsUi;
     private GameObject endGameUi;
     private GameObject troopScrollView;
-    private GameObject troopCreationMethods;
     private GameObject createTroopUi;
     private GameObject towerScrollView;
     private NetworkManager networkManager;
     private TextMeshProUGUI goldDisplay;
+    private GameObject drawPathUi;
+    private GameObject selectPositionUi;
     void Start()
     {
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
@@ -24,21 +25,39 @@ public class LevelSceneUi : MonoBehaviour
         goldDisplay = GameObject.Find("GoldDisplay").GetComponent<TextMeshProUGUI>();
         optionsUi = GameObject.Find("OptionsUi");
         endGameUi = GameObject.Find("EndGameUi");
-        troopCreationMethods = GameObject.Find("TroopCreationMethods");
         troopScrollView = GameObject.Find("TroopScrollView");
         createTroopUi = GameObject.Find("CreateTroopUi");
         towerScrollView = GameObject.Find("TowerScrollView");
+        drawPathUi = GameObject.Find("DrawPathStateUi");
+        selectPositionUi = GameObject.Find("SelectPositionStateUi");
+        selectPositionUi.SetActive(false);
+        drawPathUi.SetActive(false);
         towerScrollView.SetActive(false);
         troopScrollView.SetActive(false);
-        troopCreationMethods.SetActive(false);
         endGameUi.SetActive(false);
         optionsUi.SetActive(false);
         inGameUi.SetActive(false);
     }
 
-    public void displayGold(int gold)
+    public void displayDrawPathUi()
     {
-        goldDisplay.text = gold.ToString();
+        drawPathUi.SetActive(true);
+    }
+
+    public void displaySelectPositionUi()
+    {
+        selectPositionUi.SetActive(true);
+    }
+
+    public void displayViewingUi()
+    {
+        drawPathUi.SetActive(false);
+        selectPositionUi.SetActive(false);
+    }
+
+    public void displayGold(int gold, int maxGold)
+    {
+        goldDisplay.text = "Gold: " + gold.ToString() + "/" + maxGold.ToString();
     }
 
     public void disableAllUi()
@@ -46,7 +65,6 @@ public class LevelSceneUi : MonoBehaviour
         endGameUi.SetActive(false);
         optionsUi.SetActive(false);
         inGameUi.SetActive(false);
-        troopCreationMethods.SetActive(false);
     }
     public void activateInGameUi()
     {
@@ -81,14 +99,9 @@ public class LevelSceneUi : MonoBehaviour
             endGameUi.GetComponentInChildren<Button>().gameObject.SetActive(false);
         }
     }
-
-    public void activateTroopMethodUi()
-    {
-        troopCreationMethods.SetActive(true);
-    }
     public void activateTroopScrollView()
     {
-        client.changeClientState("ViewingState");
+        client.toViewingState();
         towerScrollView.SetActive(false);
         if (troopScrollView.activeSelf)
         {
@@ -102,9 +115,9 @@ public class LevelSceneUi : MonoBehaviour
 
     public void activateTowerScrollView()
     {
-        client.changeClientState("ViewingState");
+        client.toViewingState();
         troopScrollView.SetActive(false);
-        if (troopScrollView.activeSelf)
+        if (towerScrollView.activeSelf)
         {
             towerScrollView.SetActive(false);
         }
@@ -112,6 +125,11 @@ public class LevelSceneUi : MonoBehaviour
         {
             towerScrollView.SetActive(true);
         }
+    }
+
+    public void toDrawPathState()
+    {
+        client.toDrawPathState();
     }
 
     public void setClient(Client client)
@@ -126,27 +144,10 @@ public class LevelSceneUi : MonoBehaviour
 
     public void createTroop(string troopName)
     {
-        client.changeClientState("ViewingState");
+        client.toDrawPathState();
+        /*client.changeClientState("ViewingState");
+        activateTroopMethodUi();*/
         client.createTroopEvent(troopName);
-        activateTroopMethodUi();
-    }
-
-    public void selectCastle()
-    {
-        client.changeToSelectState("Castle");
-        troopCreationMethods.SetActive(false);
-    }
-
-    public void selectTroop()
-    {
-        client.changeToSelectState("Troop");
-        troopCreationMethods.SetActive(false);
-    }
-
-    public void changeClientState(string state)
-    {
-        client.changeClientState(state);
-        troopCreationMethods.SetActive(false);
     }
 
     public void pauseGame()
@@ -167,5 +168,37 @@ public class LevelSceneUi : MonoBehaviour
     public void returnToLevelSelect()
     {
         networkManager.ServerChangeScene("MultiplayerScene");
+    }
+
+    public void displayTowerInfo(string type)
+    {
+        Dictionary<string, object> info = client.getTowerInfo(type);
+        IDictionaryEnumerator enumerator = info.GetEnumerator();
+
+        string result = "";
+        while (enumerator.MoveNext())
+        {
+            string key = (string)enumerator.Key;
+            object value = enumerator.Value;
+            result += key + ": " + value.ToString() + "\n";
+        }
+
+        InfoPanel.displayInfo(info["Name"].ToString(), result);
+    }
+
+    public void displayTroopInfo(string type)
+    {
+        Dictionary<string, object> info = client.getTroopInfo(type);
+        IDictionaryEnumerator enumerator = info.GetEnumerator();
+
+        string result = "";
+        while (enumerator.MoveNext())
+        {
+            string key = (string)enumerator.Key;
+            object value = enumerator.Value;
+            result += key + ": " + value.ToString() + "\n";
+        }
+
+        InfoPanel.displayInfo(info["Name"].ToString(), result);
     }
 }

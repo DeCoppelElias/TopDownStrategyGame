@@ -11,5 +11,9 @@ public abstract class ClientState
     {
         this.clientStateManager = clientStateManager;
     }
+
+    /// <summary>
+    /// Each client state must implement this method. This method will be called on the client every frame
+    /// </summary>
     public abstract void action();
 }

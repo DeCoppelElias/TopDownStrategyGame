@@ -8,22 +8,49 @@ public abstract class AttackingEntity : Entity
     [SyncVar]
     [SerializeField]
     protected int _damage = 10;
-    protected enum EntityState { Normal, WalkingToTarget, Attacking }
+    public int Damage { get => _damage; }
+
+    [SerializeField]
+    protected float _range = 2;
+    public float Range { get => _range; }
+
+    public enum EntityState { Normal, WalkingToTarget, Attacking }
     [SyncVar]
     [SerializeField]
-    protected EntityState _entityState = EntityState.Normal;
+    protected EntityState _currentEntityState = EntityState.Normal;
+    public EntityState CurrentEntityState { get => _currentEntityState; }
+
     [SyncVar]
     [SerializeField]
-    protected float _cooldown = 1;
+    protected float _attackCooldown = 1;
+    public float AttackCooldown { get => _attackCooldown; }
+
     [SyncVar]
     [SerializeField]
     protected float _lastAttack;
+
     [SyncVar]
     [SerializeField]
     protected Entity _currentTarget;
+    public Entity CurrentTarget { get => _currentTarget; }
+
     [SyncVar]
     [SerializeField]
     protected List<Entity> _targetsToAttack = new List<Entity>();
+    [SerializeField]
+    private int _cost;
+    public int Cost { get => _cost; }
+
+    protected GameObject attackRing;
+
+    public virtual void Start()
+    {
+        this.attackRing = this.transform.Find("AttackRing").gameObject;
+        attackRing.transform.localScale = new Vector3((_range * 2)+1, (_range * 2) + 1, 0);
+        Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
+        alphaColor.a = 0.2f;
+        attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
+    }
 
     /// <summary>
     /// This method is called when a new collision enters the Attack Ring
@@ -31,7 +58,7 @@ public abstract class AttackingEntity : Entity
     /// <param name="collision"></param>
     public void onEnterAttack(Collider2D collision)
     {
-        if (this._owner is Client client && !client.clientIsServer()) return;
+        if (this._owner is Client client && !client.isServer) return;
         Entity entity = collision.GetComponent<Entity>();
         if (entity && _serverClient && entity.ServerClient && _owner != entity.Owner)
         {
@@ -39,13 +66,13 @@ public abstract class AttackingEntity : Entity
             _targetsToAttack.Add(entity);
             if (_currentTarget == entity)
             {
-                _entityState = AttackingEntity.EntityState.Attacking;
+                _currentEntityState = AttackingEntity.EntityState.Attacking;
                 //Debug.Log(this + " will now attack " + _currentTarget);
             }
             else if (_currentTarget == null)
             {
                 _currentTarget = entity;
-                _entityState = AttackingEntity.EntityState.Attacking;
+                _currentEntityState = AttackingEntity.EntityState.Attacking;
                 //Debug.Log(this + " will now attack " + _currentTarget);
             }
         }
@@ -57,9 +84,9 @@ public abstract class AttackingEntity : Entity
     /// <param name="collision"></param>
     public void onExitAttack(Collider2D collision)
     {
-        if (this._owner is Client client && !client.clientIsServer()) return;
+        if (this._owner is Client client && !client.isServer) return;
         Entity entity = collision.GetComponent<Entity>();
-        if (entity && _serverClient && entity.ServerClient && _owner)
+        if (entity != null && _serverClient != null && entity.ServerClient != null)
         {
             //Debug.Log("removing entity from targets to attack: " + entity);
             _targetsToAttack.Remove(entity);
@@ -75,7 +102,7 @@ public abstract class AttackingEntity : Entity
     /// </summary>
     protected virtual void killTarget()
     {
-        _entityState = EntityState.Normal;
+        _currentEntityState = EntityState.Normal;
         Debug.Log("Killing target: " + this._currentTarget);
         this._targetsToAttack.Remove(this._currentTarget);
         this._currentTarget.getKilled();
@@ -98,7 +125,7 @@ public abstract class AttackingEntity : Entity
     protected void attackTarget()
     {
         if (!_currentTarget) return;
-        if (Time.time - _lastAttack > _cooldown)
+        if (Time.time - _lastAttack > _attackCooldown)
         {
             attackEntity(_currentTarget);
         }
@@ -117,12 +144,12 @@ public abstract class AttackingEntity : Entity
         if(this._targetsToAttack.Count > 0)
         {
             this._currentTarget = this._targetsToAttack[0];
-            this._entityState = EntityState.Attacking;
+            this._currentEntityState = EntityState.Attacking;
         }
         else
         {
             this._currentTarget = null;
-            this._entityState = EntityState.Normal;
+            this._currentEntityState = EntityState.Normal;
         }
     }
 }

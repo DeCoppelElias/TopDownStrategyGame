@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class DrawPathState : ClientState
 {
@@ -15,14 +16,14 @@ public class DrawPathState : ClientState
     }
 
     /// <summary>
-    /// In the DrawPathState this method will store a path made with the mouse
+    /// This method will keep track of the mouse position and create a list of vectors representing a path. When the mouse is no longer pressed down it will send the path to the ClientStateManager
     /// </summary>
     public override void action()
     {
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         if (!mouse)
         {
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
             {
                 startPath(mousePosition);
             }
@@ -56,13 +57,14 @@ public class DrawPathState : ClientState
         }
         else
         {
-            Debug.Log("Path must start at your castle");
+            DebugPanel.displayDebugMessage("Path must start at your castle");
+            Debug.Log("Path must start at your castle, please try again");
         }
     }
 
     private void addToPath(Vector3 position)
     {
-        if (Vector2.Distance(path[path.Count - 1], position) > 1)
+        if (Vector2.Distance(path[path.Count - 1], position) > 0.2f)
         {
             RaycastHit2D[] hits = Physics2D.LinecastAll(path[path.Count - 1], position);
             bool valid = true;
@@ -82,6 +84,7 @@ public class DrawPathState : ClientState
             else
             {
                 Debug.Log("Path crossed obstacle, please try again");
+                DebugPanel.displayDebugMessage("Path crossed obstacle, please try again");
                 resetPath();
             }
         }
@@ -93,7 +96,7 @@ public class DrawPathState : ClientState
         foreach (Collider2D collider in Physics2D.OverlapCircleAll(position, 1))
         {
             Castle castle = collider.GetComponent<Castle>();
-            if (castle && castle.Owner != this.clientStateManager.client)
+            if (castle && castle.Owner != this.clientStateManager.Client)
             {
                 found = true;
                 break;
@@ -113,7 +116,7 @@ public class DrawPathState : ClientState
             {
                 Castle castle = castleGameObject.GetComponent<Castle>();
                 float newDistance = Vector2.Distance(path[0], castle.transform.position);
-                if (distanceToClosest > newDistance && castle != this.clientStateManager.client.castle)
+                if (distanceToClosest > newDistance && castle != this.clientStateManager.Client.castle)
                 {
                     distanceToClosest = newDistance;
                     closestCastle = castle;

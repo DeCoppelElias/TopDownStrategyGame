@@ -4,12 +4,9 @@ using UnityEngine;
 
 public class Tower : AttackingEntity
 {
-    [SerializeField]
-    private int _cost;
-    public int Cost
-    {
-        get => _cost;
-    }
+    /// <summary>
+    /// This method is called when a tower is destroyed. It does all the needed procedures before actually deleting the object
+    /// </summary>
     public override void getKilled()
     {
         Castle castle = this.Owner.castle;
@@ -20,11 +17,11 @@ public class Tower : AttackingEntity
         ServerClient.destoryObject(this.gameObject);
     }
 
-    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient)
-    {
+    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient) { }
 
-    }
-
+    /// <summary>
+    /// This method will dye and name troops to visually reflect if they are owned by the player or enemies
+    /// </summary>
     public void dyeAndNameTower()
     {
         if (this.Owner.isLocalPlayer)
@@ -61,9 +58,12 @@ public class Tower : AttackingEntity
         }
     }
 
+    /// <summary>
+    /// This method will update the tower, it will atack an enemy if in range
+    /// </summary>
     public void updateTower()
     {
-        if (_entityState.Equals(EntityState.Attacking))
+        if (_currentEntityState.Equals(EntityState.Attacking))
         {
             attackTarget();
         }

@@ -69,6 +69,9 @@ public class Client : Player
         }
     }
 
+    /// <summary>
+    /// This method is called when a client wants to leave the game
+    /// </summary>
     public void leaveGame()
     {
         if (!isLocalPlayer) return;
@@ -80,6 +83,9 @@ public class Client : Player
         Invoke("disconnect", 0.5f);
     }
 
+    /// <summary>
+    /// This method is called on the local client when it wants to disconnect
+    /// </summary>
     private void disconnect()
     {
         if (isServer)
@@ -93,22 +99,46 @@ public class Client : Player
             NetworkManager.singleton.StopClient();
         }
     }
-
-    [Client]
-    public bool clientIsServer()
-    {
-        return isServer;
-    }
     
     /// <summary>
     /// Will display gold on screen when local client
     /// </summary>
     /// <param name="gold"></param>
     [Client]
-    public void displayGold(int gold)
+    public void displayGold(int gold, int maxGold)
     {
         if (!isLocalPlayer) return;
-        uiManager.displayGold(gold);
+        uiManager.displayGold(gold, maxGold);
+    }
+
+    [Client]
+    public void displayDrawPathUi()
+    {
+        uiManager.displayDrawPathUi();
+    }
+
+    [Client]
+    public void displaySelectPositionUi()
+    {
+        uiManager.displaySelectPositionUi();
+    }
+
+    [Client]
+    public void displayViewingUi()
+    {
+        uiManager.displayViewingUi();
+    }
+
+    [Client]
+    public Dictionary<string, object> getTowerInfo(string type)
+    {
+        return this.castle.getTowerInfo(type);
+    }
+
+    [Client]
+    public Dictionary<string, object> getTroopInfo(string type)
+    {
+        return this.castle.getTroopInfo(type);
     }
 
     /// <summary>
@@ -171,11 +201,15 @@ public class Client : Player
         }
     }
 
+    /// <summary>
+    /// Will handle the event of tower creation
+    /// </summary>
+    /// <param name="towerName"></param> a string representing the type of tower that will be created
     [Client]
     public void createTowerEvent(string towerName)
     {
         selectedTower = towerName;
-        changeClientState("SelectPositionState");
+        toSelectPositionState();
     }
 
     /// <summary>
@@ -188,16 +222,42 @@ public class Client : Player
         selectedTroop = troopName;
     }
 
+    /// <summary>
+    /// Changes the client state to viewing state
+    /// </summary>
     [Client]
-    public void changeToSelectState(string target)
+    public void toViewingState()
     {
-        this.clientStateManager.changeState("SelectEntityState", target);
+        clientStateManager.toViewingState();
     }
 
+    /// <summary>
+    /// Changes the client state to draw path state
+    /// </summary>
     [Client]
-    public void changeClientState(string state)
+    public void toDrawPathState()
     {
-        this.clientStateManager.changeState(state);
+        clientStateManager.toDrawPathState();
+    }
+
+    /// <summary>
+    /// Changes the client state to select entity state
+    /// </summary>
+    /// <param name="target"></param> the type of target to be selected
+    [Client]
+    public void toSelectEntityState(string target)
+    {
+        clientStateManager.toSelectEntityState(target);
+    }
+
+    /// <summary>
+    /// Changes the client state to select position state
+    /// </summary>
+    [Client]
+
+    public void toSelectPositionState()
+    {
+        clientStateManager.toSelectPositionState();
     }
 
     /// <summary>
@@ -262,8 +322,13 @@ public class Client : Player
         return this.castle.transform.position;
     }
 
+
+    /// <summary>
+    /// This method will do the necessary server updates when a client is disconnected
+    /// </summary>
+    /// <param name="clientGameObject"></param>
     [Command]
-    public void onClientDisconnect(GameObject clientGameObject)
+    private void onClientDisconnect(GameObject clientGameObject)
     {
         Debug.Log("client " + this + " disconnected, setting castle owner to null");
         Client client = clientGameObject.GetComponent<Client>();
@@ -361,13 +426,6 @@ public class Client : Player
         Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
         NetworkManager networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         networkManager.maxConnections = level.maxPlayers;
-
-        foreach(Vector2 castlePosiiton in level.castlePositions)
-        {
-            GameObject castle = Instantiate(level.castlePrefab, castlePosiiton, Quaternion.identity, GameObject.Find("Castles").transform);
-            NetworkServer.Spawn(castle);
-        }
-        
         updateUiOnClients();
     }
 

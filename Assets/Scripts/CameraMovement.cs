@@ -13,6 +13,9 @@ public class CameraMovement : MonoBehaviour
     public float cameraMax_y;
     private Camera mainCamera;
 
+    private int length;
+    private int height;
+
     public bool cameraMovement = false;
 
     private void Start()
@@ -45,6 +48,7 @@ public class CameraMovement : MonoBehaviour
 
             if (!(cameraMax_x == 0 && cameraMax_y == 0))
             {
+                refreshCameraBounds();
                 transform.position = new Vector3(Mathf.Clamp(transform.position.x, -cameraMax_x, cameraMax_x), Mathf.Clamp(transform.position.y, -cameraMax_y, cameraMax_y), transform.position.z);
             }
 
@@ -59,6 +63,13 @@ public class CameraMovement : MonoBehaviour
     }
 
     public void setCameraBounds(int length, int height)
+    {
+        this.length = length;
+        this.height = height;
+        refreshCameraBounds();
+    }
+
+    private void refreshCameraBounds()
     {
         float vertExtent = mainCamera.orthographicSize;
         float horzExtent = vertExtent * Screen.width / Screen.height;
