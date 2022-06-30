@@ -47,3 +47,6 @@ TagManager:
   - name: Entity
     uniqueID: 548644899
     locked: 0
+  - name: Troop
+    uniqueID: 340317993
+    locked: 0

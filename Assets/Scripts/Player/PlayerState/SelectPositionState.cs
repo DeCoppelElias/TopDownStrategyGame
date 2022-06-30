@@ -14,7 +14,9 @@ public class SelectPositionState : ClientState
     {
         if (Input.GetKeyDown(KeyCode.Mouse0) && !EventSystem.current.IsPointerOverGameObject())
         {
-            clientStateManager.sendPositionToPlayer(Camera.main.ScreenToWorldPoint(Input.mousePosition));
+            Vector2 position = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            clientStateManager.sendPositionToPlayer(position);
+            //Debug.Log("clicked position: " + position);
         }
     }
 }

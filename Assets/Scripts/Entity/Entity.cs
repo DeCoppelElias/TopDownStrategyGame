@@ -16,21 +16,29 @@ public abstract class Entity : NetworkBehaviour
         set => _health = value;
     }
 
-    [SyncVar(hook = nameof(updateOwnerClientEvent))][SerializeField]
+    [SerializeField]
+    [SyncVar(hook = nameof(updateOwnerClientEvent))]
     protected Player _owner;
+
     public Player Owner
     {
         get => _owner;
         set => _owner = value;
     }
 
-    [SerializeField]
+    [SerializeField][SyncVar]
     protected Client _serverClient;
     public Client ServerClient
     {
         get => _serverClient;
         set => _serverClient = value;
     }
+
+    private Castle castle;
+
+    public abstract void detectClick();
+
+    public abstract Dictionary<string, object> getEntityInfo();
 
     /// <summary>
     /// This method is called when an entity is killed. It does all the needed procedures before actually deleting the object
@@ -42,15 +50,15 @@ public abstract class Entity : NetworkBehaviour
     /// </summary>
     /// <param name="oldClient"></param> The old owner client
     /// <param name="newClient"></param> The new owner client
-    public void updateOwnerClientEvent(Player oldClient, Player newClient)
+    public void updateOwnerClientEvent(Player oldPlayer, Player newPlayer)
     {
-        updateOwnerClientEventSpecific(oldClient,newClient);
+        Invoke("updateOwnerClientEventSpecific",0.1f);
     }
 
     /// <summary>
     /// Abstract method for specific operations when the owner client is changed
     /// </summary>
-    /// <param name="oldClient"></param> The old owner client, should always be null
-    /// <param name="newClient"></param> The new owner client
-    protected abstract void updateOwnerClientEventSpecific(Player oldClient, Player newClient);
+    /// <param name="oldPlayer"></param> The old owner client, should always be null
+    /// <param name="newPlayer"></param> The new owner client
+    protected abstract void updateOwnerClientEventSpecific();
 }

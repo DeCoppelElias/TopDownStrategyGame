@@ -31,7 +31,7 @@ public abstract class AttackingEntity : Entity
 
     [SyncVar]
     [SerializeField]
-    protected Entity _currentTarget;
+    protected Entity _currentTarget = null;
     public Entity CurrentTarget { get => _currentTarget; }
 
     [SyncVar]
@@ -41,15 +41,17 @@ public abstract class AttackingEntity : Entity
     private int _cost;
     public int Cost { get => _cost; }
 
-    protected GameObject attackRing;
+    [SyncVar(hook = nameof(onAttackRingChangeScale))]
+    protected Vector3 attackRingScale = new Vector3(0,0,0);
+    [SyncVar(hook = nameof(onAttackRingChangeOpacity))]
+    protected float attackRingOpacity = 0;
 
     public virtual void Start()
     {
-        this.attackRing = this.transform.Find("AttackRing").gameObject;
-        attackRing.transform.localScale = new Vector3((_range * 2)+1, (_range * 2) + 1, 0);
-        Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-        alphaColor.a = 0.2f;
-        attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
+        if (!isServer) return;
+        Vector3 scale = new Vector3((_range * 2) + 1, (_range * 2) + 1, 0);
+        this.attackRingOpacity = 0.2f;
+        this.attackRingScale = scale;
     }
 
     /// <summary>
@@ -67,12 +69,14 @@ public abstract class AttackingEntity : Entity
             if (_currentTarget == entity)
             {
                 _currentEntityState = AttackingEntity.EntityState.Attacking;
+                this.attackRingOpacity = 1f;
                 //Debug.Log(this + " will now attack " + _currentTarget);
             }
             else if (_currentTarget == null)
             {
                 _currentTarget = entity;
                 _currentEntityState = AttackingEntity.EntityState.Attacking;
+                this.attackRingOpacity = 1f;
                 //Debug.Log(this + " will now attack " + _currentTarget);
             }
         }
@@ -103,7 +107,7 @@ public abstract class AttackingEntity : Entity
     protected virtual void killTarget()
     {
         _currentEntityState = EntityState.Normal;
-        Debug.Log("Killing target: " + this._currentTarget);
+        //Debug.Log("Killing target: " + this._currentTarget);
         this._targetsToAttack.Remove(this._currentTarget);
         this._currentTarget.getKilled();
         this._currentTarget = null;
@@ -145,11 +149,33 @@ public abstract class AttackingEntity : Entity
         {
             this._currentTarget = this._targetsToAttack[0];
             this._currentEntityState = EntityState.Attacking;
+            this.attackRingOpacity = 1f;
         }
         else
         {
             this._currentTarget = null;
             this._currentEntityState = EntityState.Normal;
+            this.attackRingOpacity = 0.2f;
         }
+    }
+
+    public void onAttackRingChangeOpacity(float oldOpacity, float newOpacity)
+    {
+        Invoke("updateAttackRingOpacity", 0.1f);
+    }
+
+    private void updateAttackRingOpacity()
+    {
+        this.ServerClient.updateAttackRingOfGameObject(this.gameObject, this.attackRingOpacity);
+    }
+
+    public void onAttackRingChangeScale(Vector3 oldScale, Vector3 newScale)
+    {
+        Invoke("updateAttackRingScale", 0.1f);
+    }
+
+    private void updateAttackRingScale()
+    {
+        this.ServerClient.updateAttackRingOfGameObject(this.gameObject, this.attackRingScale);
     }
 }

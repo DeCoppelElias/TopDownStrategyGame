@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
 
-public class AttackEntity : NetworkBehaviour
+public class AttackEntity : MonoBehaviour
 {
     private void OnTriggerEnter2D(Collider2D collision)
     {

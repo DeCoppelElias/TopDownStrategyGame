@@ -5,7 +5,7 @@ using Mirror;
 using UnityEngine.UI;
 using TMPro;
 
-public class Server : MonoBehaviour
+public class HostConnect : NetworkBehaviour
 {
     private NetworkManager networkManager;
     public TMP_InputField ip_inputField;
@@ -23,5 +23,11 @@ public class Server : MonoBehaviour
     {
         networkManager.networkAddress = ip_inputField.text;
         networkManager.StartClient();
+    }
+
+    public void startSinglePlayer()
+    {
+        networkManager.StartHost();
+        networkManager.maxConnections = 1;
     }
 }

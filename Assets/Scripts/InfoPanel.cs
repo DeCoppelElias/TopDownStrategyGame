@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class InfoPanel : MonoBehaviour
 {
+    private float lastShown = 0;
+    private float hideCooldown = 1;
     private void Start()
     {
         Hide();
@@ -12,7 +14,7 @@ public class InfoPanel : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && Time.time > lastShown + hideCooldown)
         {
             this.transform.Find("Name").GetComponent<TextMeshProUGUI>().text = "";
             this.transform.Find("Info").GetComponent<TextMeshProUGUI>().text = "";
@@ -25,6 +27,7 @@ public class InfoPanel : MonoBehaviour
         infoPanel.transform.Find("Name").GetComponent<TextMeshProUGUI>().text = name;
         infoPanel.transform.Find("Info").GetComponent<TextMeshProUGUI>().text = info;
         infoPanel.GetComponent<InfoPanel>().Show();
+        infoPanel.GetComponent<InfoPanel>().lastShown = Time.time;
     }
 
     private void Hide()

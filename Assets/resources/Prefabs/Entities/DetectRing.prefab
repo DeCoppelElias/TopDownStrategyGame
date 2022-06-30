@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 8846842732762332458}
   - component: {fileID: 5127153124342404983}
   - component: {fileID: 1437229894101271751}
-  - component: {fileID: 4628915440706168015}
   - component: {fileID: 6476274384055632839}
+  - component: {fileID: -813760746009379363}
   m_Layer: 0
   m_Name: DetectRing
   m_TagString: Untagged
@@ -101,20 +101,6 @@ CircleCollider2D:
   m_Offset: {x: -0.0018921196, y: 0}
   serializedVersion: 2
   m_Radius: 0.48839852
---- !u!114 &4628915440706168015
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8975948001181642714}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: afa4a192e77cf1941b3b6034630a77b9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  syncMode: 0
-  syncInterval: 0.1
 --- !u!50 &6476274384055632839
 Rigidbody2D:
   serializedVersion: 4
@@ -136,3 +122,15 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &-813760746009379363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8975948001181642714}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afa4a192e77cf1941b3b6034630a77b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

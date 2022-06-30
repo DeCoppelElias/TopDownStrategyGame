@@ -20,10 +20,10 @@ public class Level : NetworkBehaviour
     private void Start()
     {
         cameraMovement = GameObject.Find("Main Camera").GetComponent<CameraMovement>();
-        initLevel();
     }
     public void initLevel()
     {
+        //Debug.Log("Setting Camera Bounds");
         cameraMovement.cameraMovement = true;
         cameraMovement.setCameraBounds(length, height);
         buildLevelEdgeWall();

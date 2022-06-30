@@ -21,22 +21,23 @@ public abstract class Troop : AttackingEntity
 
     private LineRenderer lineRenderer;
 
-    private GameObject detectRing;
+    [SyncVar(hook = nameof(onDetectRingChangeScale))]
+    private Vector3 detectRingScale = new Vector3(0, 0, 0);
+    [SyncVar(hook = nameof(onDetectRingChangeOpacity))]
+    private float detectRingOpacity = 0;
 
     public override void Start()
     {
+        if (!isServer) return;
         base.Start();
+
         this.lineRenderer = this.GetComponentInChildren<LineRenderer>();
         lineRenderer.positionCount = 0;
 
-
-        this.detectRing = this.transform.Find("DetectRing").gameObject;
-        this.detectRing.transform.localScale = new Vector3((viewRange * 2) + 1, (viewRange * 2) + 1, 0);
-        Color alphaColor = detectRing.GetComponent<SpriteRenderer>().color;
-        alphaColor.a = 0.2f;
-        detectRing.GetComponent<SpriteRenderer>().color = alphaColor;
+        Vector3 scale = new Vector3((viewRange * 2) + 1, (viewRange * 2) + 1, 0);
+        this.detectRingOpacity = 0.2f;
+        this.detectRingScale = scale;
     }
-
 
     /// <summary>
     /// This will update a troop, it will make the troop attack, follow or continue on his path
@@ -58,14 +59,24 @@ public abstract class Troop : AttackingEntity
                     transform.position = Vector3.MoveTowards(transform.position, _path[0], step);
                 }
             }
-
-            Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 0.2f;
-            attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
-
-            alphaColor = detectRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 0.2f;
-            detectRing.GetComponent<SpriteRenderer>().color = alphaColor;
+            else
+            {
+                // Searching for closest castle and attacking it
+                Castle closestCastle = null;
+                float smallestDistance = float.MaxValue;
+                foreach(Castle castle in GameObject.Find("Castles").GetComponentsInChildren<Castle>())
+                {
+                    float distance = Vector3.Distance(castle.transform.position, this.transform.position);
+                    if(distance < smallestDistance && castle.Owner != this.Owner)
+                    {
+                        smallestDistance = distance;
+                        closestCastle = castle;
+                    }
+                }
+                if(closestCastle == null) { return; }
+                PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+                _path = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(closestCastle.transform.position));
+            }
         }
         if (_currentEntityState.Equals(EntityState.WalkingToTarget))
         {
@@ -78,26 +89,10 @@ public abstract class Troop : AttackingEntity
             {
                 _currentEntityState = EntityState.Normal;
             }
-
-            Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 0.2f;
-            attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
-
-            alphaColor = detectRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 1f;
-            detectRing.GetComponent<SpriteRenderer>().color = alphaColor;
         }
         if (_currentEntityState.Equals(EntityState.Attacking))
         {
             attackTarget();
-
-            Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 1;
-            attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
-
-            alphaColor = detectRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 1f;
-            detectRing.GetComponent<SpriteRenderer>().color = alphaColor;
         }
     }
 
@@ -107,7 +102,7 @@ public abstract class Troop : AttackingEntity
     protected override void killTarget()
     {
         _currentEntityState = EntityState.Normal;
-        Debug.Log("Killing target: " + this._currentTarget);
+        //Debug.Log("Killing target: " + this._currentTarget);
         this._targetsToAttack.Remove(this._currentTarget);
         this._targetsToFollow.Remove(this._currentTarget);
         this._currentTarget.getKilled();
@@ -123,16 +118,22 @@ public abstract class Troop : AttackingEntity
         {
             _currentTarget = null;
             _currentEntityState = AttackingEntity.EntityState.Normal;
+            this.detectRingOpacity = 0.2f;
+            this.attackRingOpacity = 0.2f;
         }
         else if (_targetsToAttack.Count > 0)
         {
             _currentTarget = _targetsToAttack[0];
             _currentEntityState = AttackingEntity.EntityState.Attacking;
+            this.detectRingOpacity = 1f;
+            this.attackRingOpacity = 1f;
         }
         else if (_targetsToFollow.Count > 0)
         {
             _currentTarget = _targetsToFollow[0];
             _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
+            this.detectRingOpacity = 1f;
+            this.attackRingOpacity = 0.2f;
         }
     }
 
@@ -154,10 +155,10 @@ public abstract class Troop : AttackingEntity
     /// </summary>
     /// <param name="oldClient"></param> The old owner client, should always be null
     /// <param name="newClient"></param> The new owner client
-    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient)
+    protected override void updateOwnerClientEventSpecific()
     {
-        Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
-        dyeAndNameTroop();
+        //Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
+        dyeAndNameTroop(this.Owner);
     }
 
     /// <summary>
@@ -176,6 +177,7 @@ public abstract class Troop : AttackingEntity
             {
                 _currentTarget = entity;
                 _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
+                this.detectRingOpacity = 1f;
                 //Debug.Log(this + " follows " + _currentTarget);
             }
         }
@@ -203,42 +205,43 @@ public abstract class Troop : AttackingEntity
     /// <summary>
     /// This method will dye and name troops to visually reflect if they are owned by the player or enemies
     /// </summary>
-    public void dyeAndNameTroop()
+    public void dyeAndNameTroop(Player newOwner)
     {
-        if (GameObject.Find("LocalClient") && this.Owner == GameObject.Find("LocalClient").GetComponent<Client>())
+        if (newOwner == null) return;
+        if (newOwner.name == "LocalClient")
         {
             this.name = "Local" + this.name;
             float r = 88;  // red component
             float g = 222;  // green component
             float b = 255;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
-        else if (this.Owner is AiClient)
+        else if (newOwner is AiClient)
         {
             this.name = "Ai" + this.name;
             float r = 95;  // red component
             float g = 95;  // green component
             float b = 95;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
-        else if (this.Owner != null)
+        else if (newOwner != null)
         {
             this.name = "Enemy" + this.name;
             float r = 255;  // red component
             float g = 95;  // green component
             float b = 95;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
-        else if (this.Owner == null)
+        else if (newOwner == null)
         {
             this.name = "Lost" + this.name;
             float r = 255;  // red component
             float g = 255;  // green component
             float b = 255;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
     }
@@ -246,7 +249,7 @@ public abstract class Troop : AttackingEntity
     /// <summary>
     /// This method will visualize the path of the troop
     /// </summary>
-    public void createPathLine()
+    private void createPathLine()
     {
         if (this.Owner.isLocalPlayer)
         {
@@ -258,19 +261,52 @@ public abstract class Troop : AttackingEntity
                 lineRenderer.SetPosition(lineRenderer.positionCount - 1, position);
             }
             lineRenderer.gameObject.GetComponent<LineRendererController>().decayOverTime(3);
-
         }
     }
 
-    public Dictionary<string, object> getInfo()
+    public override void detectClick()
+    {
+        Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
+        if(localClient.getClientState() == "ViewingState")
+        {
+            createPathLine();
+            Dictionary<string, object> info = getEntityInfo();
+            localClient.displayInfo(info);
+        }
+    }
+
+    public override Dictionary<string, object> getEntityInfo()
     {
         Dictionary<string, object> result = new Dictionary<string, object>();
         result.Add("Name", this.name);
         result.Add("Damage", this.Damage);
         result.Add("AttackCooldown", this.AttackCooldown);
         result.Add("Range", this.Range);
-        result.Add("CurrentEntityState", this.CurrentEntityState);
-        result.Add("CurrentTarget", this.CurrentTarget);
+        result.Add("CurrentEntityState", this.CurrentEntityState.ToString());
+        if(this.CurrentEntityState == EntityState.Attacking)
+        {
+            result.Add("CurrentTarget", this.CurrentTarget.ToString());
+        }
         return result;
+    }
+
+    public void onDetectRingChangeOpacity(float oldOpacity, float newOpacity)
+    {
+        Invoke("updateDetectRingOpacity", 0.1f);
+    }
+
+    public void onDetectRingChangeScale(Vector3 oldScale, Vector3 newScale)
+    {
+        Invoke("updateDetectRingScale", 0.1f);
+    }
+
+    private void updateDetectRingOpacity()
+    {
+        this.ServerClient.updateDetectRingOfGameObject(this.gameObject, this.detectRingOpacity);
+    }
+
+    private void updateDetectRingScale()
+    {
+        this.ServerClient.updateDetectRingOfGameObject(this.gameObject, this.detectRingScale);
     }
 }

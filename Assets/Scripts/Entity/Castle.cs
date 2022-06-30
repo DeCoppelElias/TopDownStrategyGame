@@ -25,6 +25,7 @@ public class Castle : AttackingEntity
     private int maxTowers = 3;
     [SyncVar(hook = nameof(displayGold))][SerializeField]
     private int _gold = 1;
+    public int Gold { get => _gold; }
     [SerializeField]
     private int _maxGold = 10;
     [SerializeField]
@@ -44,34 +45,22 @@ public class Castle : AttackingEntity
 
     public Dictionary<string, object> getTowerInfo(string type)
     {
-        Dictionary<string, object> result = new Dictionary<string, object>();
         GameObject prefab = null;
         if (type == "ArcherTower") prefab = _archerTowerPrefab;
         else if (type == "CannonTower") prefab = _cannonTowerPrefab;
         else if (type == "MeleeTower") prefab = _meleeTowerPrefab;
         if (prefab == null) throw new System.Exception("The tower " + type + " does not exist");
-        Tower tower = prefab.GetComponent<Tower>();
-        result.Add("Name", tower.name);
-        result.Add("Damage", tower.Damage);
-        result.Add("AttackCooldown", tower.AttackCooldown);
-        result.Add("Range", tower.Range);
-        return result;
+        return prefab.GetComponent<Tower>().getEntityInfo();
     }
 
     public Dictionary<string, object> getTroopInfo(string type)
     {
-        Dictionary<string, object> result = new Dictionary<string, object>();
         GameObject prefab = null;
         if (type == "SwordManTroop") prefab = _swordManPrefab;
         else if (type == "ArcherTroop") prefab = _archerPrefab;
         else if (type == "HorseRiderTroop") prefab = _horseRiderPrefab;
         if (prefab == null) throw new System.Exception("The tower " + type + " does not exist");
-        Troop troop = prefab.GetComponent<Troop>();
-        result.Add("Name", troop.name);
-        result.Add("Damage", troop.Damage);
-        result.Add("AttackCooldown", troop.AttackCooldown);
-        result.Add("Range", troop.Range);
-        return result;
+        return prefab.GetComponent<Troop>().getEntityInfo();
     }
     /// <summary>
     /// This method removes a troop from his castle, this means that the troop will no longer be updated
@@ -100,10 +89,11 @@ public class Castle : AttackingEntity
     /// <param name="spawnPosition"></param>
     public void createTower(string towerName, Vector2 spawnPosition)
     {
-        if(_towers.Count == 5)
+        //Debug.Log("spawning at: " + spawnPosition);
+        if(_towers.Count == maxTowers)
         {
-            DebugPanel.displayDebugMessage("Sorry you have reached the maximum amount of towers");
-            Debug.Log("Sorry you have reached the maximum amount of towers");
+            DebugPanel.displayDebugMessage("You have reached the maximum amount of towers");
+            Debug.Log("You have reached the maximum amount of towers");
             return;
         }
         if (Vector2.Distance(this.transform.position, spawnPosition) > buildRange)
@@ -116,8 +106,6 @@ public class Castle : AttackingEntity
         {
             float distance = Vector2.Distance(spawnPosition, tower.transform.position);
             float spriteSize = tower.transform.Find("AttackRing").GetComponent<SpriteRenderer>().bounds.size.x;
-            /*Debug.Log("Distance: " + distance);
-            Debug.Log("Sprite size: " + spriteSize);*/
             if (distance <= spriteSize/2)
             {
                 Debug.Log("Building cannot be that close to an other building");
@@ -214,15 +202,41 @@ public class Castle : AttackingEntity
     /// <param name="cost"></param> the cost of the troop
     private void createTroop(List<Vector2> path, GameObject prefab, int cost)
     {
-        GameObject gameObject = Instantiate(prefab, transform.position, Quaternion.identity);
+        GameObject troops = GameObject.Find("Troops");
+        GameObject gameObject = Instantiate(prefab, transform.position, Quaternion.identity, troops.transform);
         Troop troop = gameObject.GetComponent<Troop>();
         troop.Path = path;
         troop.Owner = this.Owner;
         troop.ServerClient = this.ServerClient;
         _troops.Add(troop);
         this._gold -= cost;
-        troop.dyeAndNameTroop();
         NetworkServer.Spawn(gameObject);
+    }
+
+    /// <summary>
+    /// Will create a troop that will attack the target
+    /// </summary>
+    /// <param name="path"></param> The path that the troop will take
+    [Client]
+    public void createTroop(string troop, Entity target)
+    {
+        if (target is Castle castle)
+        {
+            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+            List<Vector2> path = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(castle.transform.position));
+            createTroop(troop, path);
+        }
+        if (target is Troop enemy)
+        {
+            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+            List<Vector2> pathToEnemy = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(enemy.transform.position));
+            List<Vector2> pathFromEnemyToCastle = pathFinding.findPath(Vector3Int.FloorToInt(enemy.transform.position), Vector3Int.FloorToInt(enemy.Owner.castle.transform.position));
+
+            List<Vector2> path = pathToEnemy;
+            path.AddRange(pathFromEnemyToCastle);
+
+            createTroop(troop, path);
+        }
     }
 
     /// <summary>
@@ -233,13 +247,13 @@ public class Castle : AttackingEntity
     /// <param name="spawnPosition"></param>
     private void createTower(GameObject prefab, int cost, Vector2 spawnPosition)
     {
-        GameObject gameObject = Instantiate(prefab, spawnPosition, Quaternion.identity);
+        GameObject towers = GameObject.Find("Towers");
+        GameObject gameObject = Instantiate(prefab, spawnPosition, Quaternion.identity, towers.transform);
         Tower tower = gameObject.GetComponent<Tower>();
         tower.Owner = this.Owner;
         tower.ServerClient = this.ServerClient;
         _towers.Add(tower);
         this._gold -= cost;
-        tower.dyeAndNameTower();
         NetworkServer.Spawn(gameObject);
     }
 
@@ -288,15 +302,11 @@ public class Castle : AttackingEntity
         {
             attackTarget();
 
-            Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 1;
-            attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
+            this.attackRingOpacity = 1f;
         }
         else
         {
-            Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-            alphaColor.a = 0.2f;
-            attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
+            this.attackRingOpacity = 0.2f;
         }
     }
 
@@ -317,10 +327,15 @@ public class Castle : AttackingEntity
     /// </summary>
     /// <param name="oldClient"></param> The old owner client
     /// <param name="newClient"></param> The new owner client
-    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient)
+    protected override void updateOwnerClientEventSpecific()
     {
-        Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
-        dyeAndNameCastle();
+        //Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
+        foreach(Troop troop in this._troops)
+        {
+            troop.Owner = this.Owner;
+        }
+        //Debug.Log(newClient);
+        dyeAndNameCastle(this.Owner);
         if (this.Owner is Client client)
         {
             client.displayGold(this._gold, this._maxGold);
@@ -331,48 +346,56 @@ public class Castle : AttackingEntity
     /// Will dye and name a castle depending on their owner
     /// </summary>
     /// <param name="this"></param>
-    public void dyeAndNameCastle()
+    public void dyeAndNameCastle(Player newOwner)
     {
-        if (this.Owner == this.ServerClient)
+        /*Debug.Log("///////////////////////////");
+        Debug.Log(this);
+        Debug.Log(newOwner);
+        Debug.Log(this.ServerClient);*/
+
+        if (newOwner.name == "LocalClient")
         {
             this.gameObject.name = "LocalCastle";
-            GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateInGameUi();
             float r = 88;  // red component
             float g = 222;  // green component
             float b = 255;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
-            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
+            float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, childOpacity);
         }
-        else if (this.Owner is AiClient)
+        else if (newOwner is AiClient)
         {
             this.gameObject.name = "AiCastle";
             float r = 95;  // red component
             float g = 95;  // green component
             float b = 95;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
-            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
+            float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, childOpacity);
         }
-        else if (this.Owner != null)
+        else if (newOwner != null)
         {
             this.gameObject.name = "EnemyCastle";
             float r = 255;  // red component
             float g = 95;  // green component
             float b = 95;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
-            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
+            float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, childOpacity);
         }
-        else if (this.Owner == null)
+        else if (newOwner == null)
         {
             this.gameObject.name = "EmptyCastle";
             float r = 255;  // red component
             float g = 255;  // green component
             float b = 255;  // blue component
-            float a = this.gameObject.GetComponent<SpriteRenderer>().color.a;
-            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
+            float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
+            float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, childOpacity);
         }
     }
 
@@ -393,5 +416,30 @@ public class Castle : AttackingEntity
         {
             troop.updateTroop();
         }
+    }
+
+    public override void detectClick()
+    {
+        Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
+        if (localClient.getClientState() == "ViewingState")
+        {
+            Dictionary<string, object> info = getEntityInfo();
+            localClient.displayInfo(info);
+        }
+    }
+
+    public override Dictionary<string, object> getEntityInfo()
+    {
+        Dictionary<string, object> result = new Dictionary<string, object>();
+        result.Add("Name", this.name);
+        result.Add("Damage", this.Damage);
+        result.Add("AttackCooldown", this.AttackCooldown);
+        result.Add("Range", this.Range);
+        result.Add("CurrentEntityState", this.CurrentEntityState.ToString());
+        if (this.CurrentEntityState == EntityState.Attacking)
+        {
+            result.Add("CurrentTarget", this.CurrentTarget.ToString());
+        }
+        return result;
     }
 }

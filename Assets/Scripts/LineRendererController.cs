@@ -28,7 +28,10 @@ public class LineRendererController : MonoBehaviour
                     decay = false;
                     lineRenderer.positionCount = 0;
                 }
-                this.GetComponent<CanvasRenderer>().SetAlpha(currentDecay);
+                Color color = this.GetComponent<LineRenderer>().material.color;
+                color.a = currentDecay;
+                this.GetComponent<LineRenderer>().material.SetColor("_Color", color);
+
                 lastDecay = Time.time;
             }
         }

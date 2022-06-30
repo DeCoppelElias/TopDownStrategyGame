@@ -20,6 +20,11 @@ public class ClientStateManager
         this.Client = client;
     }
 
+    public string getClientState()
+    {
+        return this._currentClientState.ToString();
+    }
+
     /// <summary>
     /// Changes the client state to viewing state
     /// </summary>
@@ -73,7 +78,7 @@ public class ClientStateManager
     /// <param name="entity"></param>
     public void sendEntityToPlayer(Entity entity)
     {
-        Client.createSelectedTroop(entity);
+        //Client.createSelectedTroop(entity);
         toViewingState();
     }
 
@@ -83,7 +88,7 @@ public class ClientStateManager
     /// <param name="position"></param>
     public void sendPositionToPlayer(Vector2 position)
     {
-        Client.createSelectedTower(position);
+        this.Client.createSelectedTower(position);
         toViewingState();
     }
 

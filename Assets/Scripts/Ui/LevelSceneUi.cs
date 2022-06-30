@@ -20,7 +20,11 @@ public class LevelSceneUi : MonoBehaviour
     private GameObject selectPositionUi;
     void Start()
     {
-        networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
+        GameObject networkManagerGameObject = GameObject.Find("NetworkManager");
+        if (networkManagerGameObject != null)
+        {
+            networkManager = networkManagerGameObject.GetComponent<NetworkManager>();
+        }
         inGameUi = GameObject.Find("InGameUi");
         goldDisplay = GameObject.Find("GoldDisplay").GetComponent<TextMeshProUGUI>();
         optionsUi = GameObject.Find("OptionsUi");
@@ -180,6 +184,22 @@ public class LevelSceneUi : MonoBehaviour
         {
             string key = (string)enumerator.Key;
             object value = enumerator.Value;
+            result += key + ": " + value.ToString() + "\n";
+        }
+
+        InfoPanel.displayInfo(info["Name"].ToString(), result);
+    }
+
+    public void displayInfo(Dictionary<string, object> info)
+    {
+        IDictionaryEnumerator enumerator = info.GetEnumerator();
+
+        string result = "";
+        while (enumerator.MoveNext())
+        {
+            string key = (string)enumerator.Key;
+            object value = enumerator.Value;
+            if(value == null) { value = "Nothing"; }
             result += key + ": " + value.ToString() + "\n";
         }
 

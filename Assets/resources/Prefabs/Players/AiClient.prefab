@@ -63,8 +63,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   syncMode: 0
   syncInterval: 0.1
-  gameState: 1
   castle: {fileID: 0}
-  selectedTroop: 
-  uiManager: {fileID: 0}
-  aiClient: {fileID: 0}
+  _currentGameState: 0
+  aiClientState: 0
+  spawnCooldown: 10
+  defenseRange: 10

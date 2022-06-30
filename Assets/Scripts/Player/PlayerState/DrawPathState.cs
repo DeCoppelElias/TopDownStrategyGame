@@ -111,23 +111,21 @@ public class DrawPathState : ClientState
         {
             Debug.Log("Path will auto extent to Enemy closest enemy castle");
             Castle closestCastle = null;
-            float distanceToClosest = 100000;
+            float distanceToClosest = float.MaxValue;
             foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
             {
                 Castle castle = castleGameObject.GetComponent<Castle>();
-                float newDistance = Vector2.Distance(path[0], castle.transform.position);
-                if (distanceToClosest > newDistance && castle != this.clientStateManager.Client.castle)
+                float newDistance = Vector2.Distance(path[path.Count-1], castle.transform.position);
+                if (distanceToClosest > newDistance && castle.Owner != this.clientStateManager.Client)
                 {
                     distanceToClosest = newDistance;
                     closestCastle = castle;
                 }
             }
             PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector3> pathExtend = pathFinding.findPath(Vector3Int.FloorToInt(path[path.Count-1]), Vector3Int.FloorToInt(closestCastle.transform.position));
-            foreach(Vector3 extendPosition in pathExtend)
-            {
-                path.Add(extendPosition);
-            }
+            List<Vector2> pathExtend = pathFinding.findPath(Vector3Int.FloorToInt(path[path.Count-1]), Vector3Int.FloorToInt(closestCastle.transform.position));
+            path.AddRange(pathExtend);
+
             clientStateManager.sendPathToPlayer(path);
         }
         resetPath();

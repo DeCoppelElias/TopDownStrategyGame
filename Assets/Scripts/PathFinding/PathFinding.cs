@@ -61,7 +61,7 @@ public class PathFinding : MonoBehaviour
     /// <param name="start"></param>
     /// <param name="finish"></param>
     /// <returns></returns>
-    public List<Vector3> findPath(Vector3Int start, Vector3Int finish)
+    public List<Vector2> findPath(Vector3Int start, Vector3Int finish)
     {
         int counter = 0;
         Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
@@ -103,13 +103,15 @@ public class PathFinding : MonoBehaviour
             currentNode = avlTree.PopMinValue();
         }
 
-        List<Vector3> path = new List<Vector3>();
+        List<Vector2> path = new List<Vector2>();
         while (currentNode.previousNode != null)
         {
-            path.Add(currentNode.tilePosition + new Vector3(0.5f,0.5f,0));
+            Vector2 currentPosition = (Vector3)currentNode.tilePosition;
+            path.Add(currentPosition + new Vector2(0.5f,0.5f));
             currentNode = currentNode.previousNode;
         }
-        path.Add(currentNode.tilePosition);
+        Vector2 lastPosition = (Vector3)currentNode.tilePosition;
+        path.Add(lastPosition);
         path.Reverse();
 
         return path;

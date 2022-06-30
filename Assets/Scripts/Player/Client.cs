@@ -4,20 +4,20 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Mirror;
 using System;
+using UnityEngine.EventSystems;
 
 public class Client : Player
 {
     private ClientStateManager clientStateManager;
-    public enum GameState { Pause, Normal};
-    [SyncVar][SerializeField]
-    private GameState gameState = GameState.Pause;
     [SerializeField]
     private string selectedTroop;
     [SerializeField]
     private string selectedTower;
     private LevelSceneUi uiManager;
     [SerializeField]
-    private Player aiClient;
+    private GameObject aiClient;
+
+    private LevelSceneServer levelSceneServer;
 
     public override void OnStartClient()
     {
@@ -46,13 +46,21 @@ public class Client : Player
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
             this.uiManager.setClient(this);
 
+            this.levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+            
+            levelSceneServer.registerClient(this.gameObject);
+
             initLevel();
+
+            uiManager.activateInGameUi();
 
             setupClientGameObjects();
 
             findServerClient();
 
             findCastleForClient(this.gameObject);
+
+            if (isServer) Invoke("setupCastles", 5f);
         }
     }
     private void Update()
@@ -60,7 +68,7 @@ public class Client : Player
         if (!isLocalPlayer) return;
         if(SceneManager.GetActiveScene().name != "MultiplayerScene")
         {
-            if (gameState.Equals(GameState.Normal))
+            if (_currentGameState.Equals(GameState.Normal))
             {
                 clientUpdate();
                 if (!isServer) return;
@@ -99,7 +107,19 @@ public class Client : Player
             NetworkManager.singleton.StopClient();
         }
     }
-    
+
+    [Client]
+    public string getClientState()
+    {
+        return clientStateManager.getClientState();
+    }
+
+    [Client]
+    public void displayInfo(Dictionary<string, object> info)
+    {
+        this.uiManager.displayInfo(info);
+    }
+
     /// <summary>
     /// Will display gold on screen when local client
     /// </summary>
@@ -160,21 +180,6 @@ public class Client : Player
     }
 
     /// <summary>
-    /// Will initialize the level
-    /// </summary>
-    [Client]
-    private void initLevel()
-    {
-        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
-        level.initLevel();
-
-        if (isServer)
-        {
-            instantiateLevelServer();
-        }
-    }
-
-    /// <summary>
     /// Will search for the server client and set the server client parameter of every castle
     /// </summary>
     [Client]
@@ -198,6 +203,19 @@ public class Client : Player
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             uiManager.activateOptionsUi();
+        }
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Collider2D[] colliders = Physics2D.OverlapCircleAll(mousePosition, 1);
+            foreach(Collider2D collider in colliders)
+            {
+                Entity entity = collider.GetComponent<Entity>();
+                if (entity != null)
+                {
+                    entity.detectClick();
+                }
+            }
         }
     }
 
@@ -270,45 +288,10 @@ public class Client : Player
         createTroop(selectedTroop, path);
     }
 
-    /// <summary>
-    /// Will create the troop that was selected with createTroopEvent()
-    /// </summary>
-    /// <param name="path"></param> The path that the troop will take
-    [Client]
-    public void createSelectedTroop(Entity target)
-    {
-        if(target is Castle castle)
-        {
-            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector3> path = pathFinding.findPath(Vector3Int.FloorToInt(this.castle.transform.position), Vector3Int.FloorToInt(castle.transform.position));
-            List<Vector2> result = new List<Vector2>();
-            foreach(Vector3 position in path)
-            {
-                result.Add(position);
-            }
-            createTroop(selectedTroop, result);
-        }
-        if(target is Troop troop)
-        {
-            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector3> path = pathFinding.findPath(Vector3Int.FloorToInt(this.castle.transform.position), Vector3Int.FloorToInt(troop.transform.position));
-            List<Vector3> path2 = pathFinding.findPath(Vector3Int.FloorToInt(troop.transform.position), Vector3Int.FloorToInt(troop.Owner.castle.transform.position));
-            List<Vector2> result = new List<Vector2>();
-            foreach (Vector3 position in path)
-            {
-                result.Add(position);
-            }
-            foreach (Vector3 position in path2)
-            {
-                result.Add(position);
-            }
-            createTroop(selectedTroop, result);
-        }
-    }
-
     [Client]
     public void createSelectedTower(Vector2 position)
     {
+        //Debug.Log(position);
         createTower(selectedTower, position);
     }
 
@@ -341,25 +324,8 @@ public class Client : Player
     [Command]
     public void changeGameState(string gameState)
     {
-        Debug.Log("Updating gamestate from " + this.gameState.ToString() + " to " + gameState);
+        //Debug.Log("Updating gamestate from " + this.gameState.ToString() + " to " + gameState);
         updateGameStateOnServer(gameState);
-    }
-
-    /// <summary>
-    /// Will create a troop on the server
-    /// </summary>
-    /// <param name="troopName"></param> a string representing the troop
-    /// <param name="path"></param> the path that the troop will follow
-    [Command]
-    private void createTroop(string troopName, List<Vector2> path)
-    {
-        this.castle.createTroop(troopName, path);
-    }
-
-    [Command]
-    private void createTower(string towerName, Vector2 position)
-    {
-        this.castle.createTower(towerName, position);
     }
 
     /// <summary>
@@ -371,25 +337,125 @@ public class Client : Player
     {
         GameObject castles = GameObject.Find("Castles");
         Client client = clientGameObject.GetComponent<Client>();
-        bool found = false;
         foreach (Castle castle in castles.GetComponentsInChildren<Castle>())
         {
-            if ((castle.Owner == null || castle.Owner == aiClient) && !found)
+            if (castle.Owner == null)
             {
-                found = true;
                 castle.Owner = client;
                 client.castle = castle;
+                return;
+            }
+            if (castle.Owner is AiClient ai)
+            {
+                Destroy(ai.gameObject);
+
+                castle.Owner = client;
+                client.castle = castle;
+                return;
             }
         }
     }
 
-    /// <summary>
-    /// Will update the ui on all clients to in game ui
-    /// </summary>
-    [ClientRpc]
-    private void updateUiOnClients()
+    [Server]
+    public void updateAttackRingOfGameObject(GameObject gameObject, float alpha)
     {
-        GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateInGameUi();
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("AttackRing") == null) return;
+        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
+        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        updateAttackRingOfGameObjectOnClients(gameObject, alpha);
+    }
+
+    [Server]
+    public void updateAttackRingOfGameObject(GameObject gameObject, Vector3 scale)
+    {
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("AttackRing") == null) return;
+        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
+        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        updateAttackRingOfGameObjectOnClients(gameObject, scale);
+    }
+
+    [ClientRpc]
+    private void updateAttackRingOfGameObjectOnClients(GameObject gameObject, float alpha)
+    {
+        /*Debug.Log("/////////////////////");
+        Debug.Log("gameobject: " + gameObject);
+        Debug.Log("alpha: " + alpha);*/
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("AttackRing") == null) return;
+        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
+        Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
+        alphaColor.a = alpha;
+        attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
+    }
+
+    [ClientRpc]
+    private void updateAttackRingOfGameObjectOnClients(GameObject gameObject, Vector3 scale)
+    {
+        /*Debug.Log("/////////////////////");
+        Debug.Log("gameobject: " + gameObject);
+        Debug.Log("alpha: " + alpha);
+        Debug.Log("scale: " + scale);*/
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("AttackRing") == null) return;
+        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
+        attackRing.transform.localScale = scale;
+    }
+
+    [Server]
+    public void updateDetectRingOfGameObject(GameObject gameObject, float alpha)
+    {
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("DetectRing") == null) return;
+        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
+        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        updateDetectRingOfGameObjectOnClients(gameObject, alpha);
+    }
+
+    [Server]
+    public void updateDetectRingOfGameObject(GameObject gameObject, Vector3 scale)
+    {
+        if (gameObject == null) return;
+        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
+        if (detectRing == null) return;
+        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        /*Debug.Log("/////////////////////");
+        Debug.Log("gameobject: " + gameObject);
+        Debug.Log("alpha: " + alpha);
+        Debug.Log("scale: " + scale);*/
+        updateDetectRingOfGameObjectOnClients(gameObject, scale);
+    }
+
+    [ClientRpc]
+    private void updateDetectRingOfGameObjectOnClients(GameObject gameObject, float alpha)
+    {
+        /*Debug.Log("/////////////////////");
+        Debug.Log("gameobject: " + gameObject);
+        Debug.Log("alpha: " + alpha);*/
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("DetectRing") == null) return;
+        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
+        Color alphaColor = detectRing.GetComponent<SpriteRenderer>().color;
+        alphaColor.a = alpha;
+        detectRing.GetComponent<SpriteRenderer>().color = alphaColor;
+    }
+
+    [ClientRpc]
+    private void updateDetectRingOfGameObjectOnClients(GameObject gameObject, Vector3 scale)
+    {
+        /*Debug.Log("/////////////////////");
+        Debug.Log("gameobject: " + gameObject);
+        Debug.Log("alpha: " + alpha);
+        Debug.Log("scale: " + scale);*/
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("DetectRing") == null) return;
+        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
+        detectRing.transform.localScale = scale;
     }
 
     [ClientRpc]
@@ -405,11 +471,31 @@ public class Client : Player
     }
 
     /// <summary>
+    /// Will initialize the level
+    /// </summary>
+    [Client]
+    private void initLevel()
+    {
+        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
+        level.initLevel();
+
+        if (isServer)
+        {
+            instantiateLevelServer();
+        }
+    }
+
+    /// <summary>
     /// Will update the server
     /// </summary>
     [Server]
     private void serverUpdate()
     {
+        foreach (AiClient aiClient in GameObject.Find("AiClients").transform.GetComponentsInChildren<AiClient>())
+        {
+            aiClient.aiUpdate();
+        }
+
         foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
         {
             Castle currentCastle = castleGameObject.GetComponent<Castle>();
@@ -426,7 +512,6 @@ public class Client : Player
         Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
         NetworkManager networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         networkManager.maxConnections = level.maxPlayers;
-        updateUiOnClients();
     }
 
     /// <summary>
@@ -440,14 +525,14 @@ public class Client : Player
         {
             foreach (Client client in FindObjectsOfType<Client>())
             {
-                client.gameState = GameState.Normal;
+                client._currentGameState = GameState.Normal;
             }
         }
         else if (gameState.Equals("Pause"))
         {
             foreach (Client client in FindObjectsOfType<Client>())
             {
-                client.gameState = GameState.Pause;
+                client._currentGameState = GameState.Pause;
             }
         }
         else
@@ -470,6 +555,23 @@ public class Client : Player
     public void checkGameDoneAfterDelay()
     {
         Invoke("checkGameDone", 0.5f);
+    }
+
+    [Server]
+    public void setupCastles()
+    {
+        foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
+        {
+            Castle currentCastle = castleGameObject.GetComponent<Castle>();
+            if(currentCastle.Owner == null)
+            {
+                GameObject clients = GameObject.Find("AiClients");
+                GameObject ai = Instantiate(aiClient, new Vector3(0,0,0), Quaternion.identity, clients.transform);
+                NetworkServer.Spawn(ai);
+                currentCastle.Owner = ai.GetComponent<AiClient>();
+                ai.GetComponent<AiClient>().castle = currentCastle;
+            }
+        }
     }
 
     private void checkGameDone()

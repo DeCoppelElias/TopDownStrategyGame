@@ -17,44 +17,51 @@ public class Tower : AttackingEntity
         ServerClient.destoryObject(this.gameObject);
     }
 
-    protected override void updateOwnerClientEventSpecific(Player oldClient, Player newClient) { }
+    protected override void updateOwnerClientEventSpecific()
+    {
+        dyeAndNameTower(this.Owner);
+    }
 
     /// <summary>
     /// This method will dye and name troops to visually reflect if they are owned by the player or enemies
     /// </summary>
-    public void dyeAndNameTower()
+    public void dyeAndNameTower(Player newOwner)
     {
-        if (this.Owner.isLocalPlayer)
+        if (newOwner.name == "LocalClient")
         {
             this.name = "Local" + this.name;
             float r = 88;  // red component
             float g = 222;  // green component
             float b = 255;  // blue component
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
-        else if (this.Owner is AiClient)
+        else if (newOwner is AiClient)
         {
             this.name = "Ai" + this.name;
             float r = 95;  // red component
             float g = 95;  // green component
             float b = 95;  // blue component
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
-        else if (this.Owner != null)
+        else if (newOwner != null)
         {
             this.name = "Enemy" + this.name;
             float r = 255;  // red component
             float g = 95;  // green component
             float b = 95;  // blue component
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
-        else if (this.Owner == null)
+        else if (newOwner == null)
         {
             this.name = "Lost" + this.name;
             float r = 255;  // red component
             float g = 255;  // green component
             float b = 255;  // blue component
-            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, 1);
+            float a = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
+            this.transform.GetChild(0).GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, a);
         }
     }
 
@@ -66,6 +73,37 @@ public class Tower : AttackingEntity
         if (_currentEntityState.Equals(EntityState.Attacking))
         {
             attackTarget();
+
+            this.attackRingOpacity = 1f;
         }
+        else if (_currentEntityState.Equals(EntityState.Normal))
+        {
+            this.attackRingOpacity = 0.2f;
+        }
+    }
+
+    public override void detectClick()
+    {
+        Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
+        if (localClient.getClientState() == "ViewingState")
+        {
+            Dictionary<string, object> info = getEntityInfo();
+            localClient.displayInfo(info);
+        }
+    }
+
+    public override Dictionary<string, object> getEntityInfo()
+    {
+        Dictionary<string, object> result = new Dictionary<string, object>();
+        result.Add("Name", this.name);
+        result.Add("Damage", this.Damage);
+        result.Add("AttackCooldown", this.AttackCooldown);
+        result.Add("Range", this.Range);
+        result.Add("CurrentEntityState", this.CurrentEntityState.ToString());
+        if (this.CurrentEntityState == EntityState.Attacking)
+        {
+            result.Add("CurrentTarget", this.CurrentTarget.ToString());
+        }
+        return result;
     }
 }
