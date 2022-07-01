@@ -157,18 +157,10 @@ public class PathFinding : MonoBehaviour
         {
             if (currentNode.tilePosition != finish && counter < 10000)
             {
-                if (currentNode.tilePosition == new Vector3Int(13, 0, 0))
-                {
-                    int lol = 0;
-                }
                 counter++;
                 List<Vector3Int> neighbors = getNeighbors(currentNode.tilePosition);
                 foreach (Vector3Int neighborPosition in neighbors)
                 {
-                    if (neighborPosition == new Vector3Int(12, 0, 0))
-                    {
-                        int lol = 0;
-                    }
                     float distanceToFinish = Vector3Int.Distance(neighborPosition, finish);
                     float distancePath = currentNode.distancePath + Vector3Int.Distance(currentNode.tilePosition, neighborPosition);
                     Node neighborNode = new Node(distancePath, distanceToFinish, neighborPosition, currentNode);

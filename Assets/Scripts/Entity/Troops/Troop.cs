@@ -28,11 +28,15 @@ public abstract class Troop : AttackingEntity
 
     public override void Start()
     {
-        if (!isServer) return;
         base.Start();
 
         this.lineRenderer = this.GetComponentInChildren<LineRenderer>();
         lineRenderer.positionCount = 0;
+
+        GameObject troops = GameObject.Find("Troops");
+        this.transform.SetParent(troops.transform);
+
+        if (!isServer) return;
 
         Vector3 scale = new Vector3((viewRange * 2) + 1, (viewRange * 2) + 1, 0);
         this.detectRingOpacity = 0.2f;

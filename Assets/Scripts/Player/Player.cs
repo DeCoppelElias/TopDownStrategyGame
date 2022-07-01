@@ -7,11 +7,6 @@ public class Player : NetworkBehaviour
 {
     [SyncVar]
     public Castle castle;
-    public enum GameState { Pause, Normal };
-    [SyncVar]
-    [SerializeField]
-    protected GameState _currentGameState = GameState.Pause;
-    public GameState CurrentGameState { get => _currentGameState; }
 
     /// <summary>
     /// Will create a troop on the server

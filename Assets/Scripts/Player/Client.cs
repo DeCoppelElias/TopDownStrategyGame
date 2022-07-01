@@ -14,8 +14,6 @@ public class Client : Player
     [SerializeField]
     private string selectedTower;
     private LevelSceneUi uiManager;
-    [SerializeField]
-    private GameObject aiClient;
 
     private LevelSceneServer levelSceneServer;
 
@@ -44,15 +42,14 @@ public class Client : Player
             this.clientStateManager = new ClientStateManager(this);
 
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
-            this.uiManager.setClient(this);
-
             this.levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
-            
-            levelSceneServer.registerClient(this.gameObject);
+            this.uiManager.setupLevelSceneUi(this);
 
             initLevel();
 
-            uiManager.activateInGameUi();
+            setMaxPlayers();
+
+            uiManager.setupStartGameUi();
 
             setupClientGameObjects();
 
@@ -60,7 +57,7 @@ public class Client : Player
 
             findCastleForClient(this.gameObject);
 
-            if (isServer) Invoke("setupCastles", 5f);
+            this.levelSceneServer.registerClient(this.gameObject);
         }
     }
     private void Update()
@@ -68,11 +65,9 @@ public class Client : Player
         if (!isLocalPlayer) return;
         if(SceneManager.GetActiveScene().name != "MultiplayerScene")
         {
-            if (_currentGameState.Equals(GameState.Normal))
+            if (this.levelSceneServer.getCurrentGameState() == "Normal")
             {
                 clientUpdate();
-                if (!isServer) return;
-                serverUpdate();
             }
         }
     }
@@ -86,9 +81,19 @@ public class Client : Player
         if (SceneManager.GetActiveScene().name != "MultiplayerScene")
         {
             this.changeGameState("Normal");
-            onClientDisconnect(this.gameObject);
+            this.onClientDisconnect(this.gameObject);
         }
         Invoke("disconnect", 0.5f);
+    }
+
+    /// <summary>
+    /// Will initialize the level
+    /// </summary>
+    [Client]
+    private void initLevel()
+    {
+        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
+        level.initLevel();
     }
 
     /// <summary>
@@ -106,6 +111,24 @@ public class Client : Player
             Debug.Log("Stop client");
             NetworkManager.singleton.StopClient();
         }
+    }
+
+    [Client]
+    public void destoryObject(GameObject obj)
+    {
+        this.levelSceneServer.destoryObject(obj);
+    }
+
+    [Client]
+    public void clientCastleDestroyed(NetworkConnection networkConnection)
+    {
+        this.levelSceneServer.clientCastleDestroyed(networkConnection);
+    }
+
+    [Client]
+    public void checkGameDoneAfterDelay()
+    {
+        this.levelSceneServer.checkGameDoneAfterDelay();
     }
 
     [Client]
@@ -272,7 +295,6 @@ public class Client : Player
     /// Changes the client state to select position state
     /// </summary>
     [Client]
-
     public void toSelectPositionState()
     {
         clientStateManager.toSelectPositionState();
@@ -305,18 +327,71 @@ public class Client : Player
         return this.castle.transform.position;
     }
 
+    [Client]
+    public void updateAttackRingOfGameObject(GameObject gameObject, float alpha)
+    {
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("AttackRing") == null) return;
+        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
+        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        Color alphaColor = spriteRenderer.color;
+        alphaColor.a = alpha;
+        spriteRenderer.color = alphaColor;
+    }
+
+    [Client]
+    public void updateAttackRingOfGameObject(GameObject gameObject, Vector3 scale)
+    {
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("AttackRing") == null) return;
+        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
+        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        attackRing.transform.localScale = scale;
+    }
+
+    [Client]
+    public void updateDetectRingOfGameObject(GameObject gameObject, float alpha)
+    {
+        if (gameObject == null) return;
+        if (gameObject.transform.Find("DetectRing") == null) return;
+        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
+        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        Color alphaColor = spriteRenderer.color;
+        alphaColor.a = alpha;
+        spriteRenderer.color = alphaColor;
+    }
+
+    [Client]
+    public void updateDetectRingOfGameObject(GameObject gameObject, Vector3 scale)
+    {
+        if (gameObject == null) return;
+        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
+        if (detectRing == null) return;
+        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+        detectRing.transform.localScale = scale;
+    }
+
+
+
+
+
+
 
     /// <summary>
     /// This method will do the necessary server updates when a client is disconnected
     /// </summary>
     /// <param name="clientGameObject"></param>
     [Command]
-    private void onClientDisconnect(GameObject clientGameObject)
+    public void onClientDisconnect(GameObject clientGameObject)
     {
-        Debug.Log("client " + this + " disconnected, setting castle owner to null");
-        Client client = clientGameObject.GetComponent<Client>();
-        client.castle.Owner = null;
+        LevelSceneServer levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+        levelSceneServer.onClientDisconnect(clientGameObject);
     }
+
     /// <summary>
     /// Will change the game state
     /// </summary>
@@ -325,7 +400,8 @@ public class Client : Player
     public void changeGameState(string gameState)
     {
         //Debug.Log("Updating gamestate from " + this.gameState.ToString() + " to " + gameState);
-        updateGameStateOnServer(gameState);
+        LevelSceneServer levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+        levelSceneServer.updateGameStateOnServer(gameState);
     }
 
     /// <summary>
@@ -333,254 +409,20 @@ public class Client : Player
     /// </summary>
     /// <param name="clientGameObject"></param> a gameobject representing the client where the found castle will be linked to
     [Command]
-    private void findCastleForClient(GameObject clientGameObject)
+    public void findCastleForClient(GameObject clientGameObject)
     {
-        GameObject castles = GameObject.Find("Castles");
-        Client client = clientGameObject.GetComponent<Client>();
-        foreach (Castle castle in castles.GetComponentsInChildren<Castle>())
-        {
-            if (castle.Owner == null)
-            {
-                castle.Owner = client;
-                client.castle = castle;
-                return;
-            }
-            if (castle.Owner is AiClient ai)
-            {
-                Destroy(ai.gameObject);
-
-                castle.Owner = client;
-                client.castle = castle;
-                return;
-            }
-        }
-    }
-
-    [Server]
-    public void updateAttackRingOfGameObject(GameObject gameObject, float alpha)
-    {
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("AttackRing") == null) return;
-        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
-        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        updateAttackRingOfGameObjectOnClients(gameObject, alpha);
-    }
-
-    [Server]
-    public void updateAttackRingOfGameObject(GameObject gameObject, Vector3 scale)
-    {
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("AttackRing") == null) return;
-        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
-        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        updateAttackRingOfGameObjectOnClients(gameObject, scale);
-    }
-
-    [ClientRpc]
-    private void updateAttackRingOfGameObjectOnClients(GameObject gameObject, float alpha)
-    {
-        /*Debug.Log("/////////////////////");
-        Debug.Log("gameobject: " + gameObject);
-        Debug.Log("alpha: " + alpha);*/
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("AttackRing") == null) return;
-        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
-        Color alphaColor = attackRing.GetComponent<SpriteRenderer>().color;
-        alphaColor.a = alpha;
-        attackRing.GetComponent<SpriteRenderer>().color = alphaColor;
-    }
-
-    [ClientRpc]
-    private void updateAttackRingOfGameObjectOnClients(GameObject gameObject, Vector3 scale)
-    {
-        /*Debug.Log("/////////////////////");
-        Debug.Log("gameobject: " + gameObject);
-        Debug.Log("alpha: " + alpha);
-        Debug.Log("scale: " + scale);*/
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("AttackRing") == null) return;
-        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
-        attackRing.transform.localScale = scale;
-    }
-
-    [Server]
-    public void updateDetectRingOfGameObject(GameObject gameObject, float alpha)
-    {
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("DetectRing") == null) return;
-        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
-        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        updateDetectRingOfGameObjectOnClients(gameObject, alpha);
-    }
-
-    [Server]
-    public void updateDetectRingOfGameObject(GameObject gameObject, Vector3 scale)
-    {
-        if (gameObject == null) return;
-        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
-        if (detectRing == null) return;
-        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        /*Debug.Log("/////////////////////");
-        Debug.Log("gameobject: " + gameObject);
-        Debug.Log("alpha: " + alpha);
-        Debug.Log("scale: " + scale);*/
-        updateDetectRingOfGameObjectOnClients(gameObject, scale);
-    }
-
-    [ClientRpc]
-    private void updateDetectRingOfGameObjectOnClients(GameObject gameObject, float alpha)
-    {
-        /*Debug.Log("/////////////////////");
-        Debug.Log("gameobject: " + gameObject);
-        Debug.Log("alpha: " + alpha);*/
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("DetectRing") == null) return;
-        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
-        Color alphaColor = detectRing.GetComponent<SpriteRenderer>().color;
-        alphaColor.a = alpha;
-        detectRing.GetComponent<SpriteRenderer>().color = alphaColor;
-    }
-
-    [ClientRpc]
-    private void updateDetectRingOfGameObjectOnClients(GameObject gameObject, Vector3 scale)
-    {
-        /*Debug.Log("/////////////////////");
-        Debug.Log("gameobject: " + gameObject);
-        Debug.Log("alpha: " + alpha);
-        Debug.Log("scale: " + scale);*/
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("DetectRing") == null) return;
-        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
-        detectRing.transform.localScale = scale;
-    }
-
-    [ClientRpc]
-    private void endGame()
-    {
-        GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateEndUi();
-    }
-
-    [TargetRpc]
-    public void clientCastleDestroyed(NetworkConnection networkConnection)
-    {
-        GameObject.Find("Canvas").GetComponent<LevelSceneUi>().disableAllUi();
-    }
-
-    /// <summary>
-    /// Will initialize the level
-    /// </summary>
-    [Client]
-    private void initLevel()
-    {
-        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
-        level.initLevel();
-
-        if (isServer)
-        {
-            instantiateLevelServer();
-        }
-    }
-
-    /// <summary>
-    /// Will update the server
-    /// </summary>
-    [Server]
-    private void serverUpdate()
-    {
-        foreach (AiClient aiClient in GameObject.Find("AiClients").transform.GetComponentsInChildren<AiClient>())
-        {
-            aiClient.aiUpdate();
-        }
-
-        foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
-        {
-            Castle currentCastle = castleGameObject.GetComponent<Castle>();
-            currentCastle.updateCastle();
-        }
+        LevelSceneServer levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+        levelSceneServer.findCastleForClient(clientGameObject);
     }
 
     /// <summary>
     /// Will instantiate the level on the server
     /// </summary>
-    [Server]
-    private void instantiateLevelServer()
+    [Command]
+    public void setMaxPlayers()
     {
         Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
         NetworkManager networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         networkManager.maxConnections = level.maxPlayers;
-    }
-
-    /// <summary>
-    /// Will update the game state on every client on the server
-    /// </summary>
-    /// <param name="gameState"></param> a string representing the new game state
-    [Server]
-    private void updateGameStateOnServer(string gameState)
-    {
-        if (gameState.Equals("Normal"))
-        {
-            foreach (Client client in FindObjectsOfType<Client>())
-            {
-                client._currentGameState = GameState.Normal;
-            }
-        }
-        else if (gameState.Equals("Pause"))
-        {
-            foreach (Client client in FindObjectsOfType<Client>())
-            {
-                client._currentGameState = GameState.Pause;
-            }
-        }
-        else
-        {
-            Debug.Log("There is no gameState called: " + gameState);
-        }
-    }
-
-    /// <summary>
-    /// Will destroy a gameobject
-    /// </summary>
-    /// <param name="obj"></param> the gameobject that will be destroyed
-    [Server]
-    public void destoryObject(GameObject obj)
-    {
-        NetworkServer.Destroy(obj);
-    }
-
-    [Server]
-    public void checkGameDoneAfterDelay()
-    {
-        Invoke("checkGameDone", 0.5f);
-    }
-
-    [Server]
-    public void setupCastles()
-    {
-        foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
-        {
-            Castle currentCastle = castleGameObject.GetComponent<Castle>();
-            if(currentCastle.Owner == null)
-            {
-                GameObject clients = GameObject.Find("AiClients");
-                GameObject ai = Instantiate(aiClient, new Vector3(0,0,0), Quaternion.identity, clients.transform);
-                NetworkServer.Spawn(ai);
-                currentCastle.Owner = ai.GetComponent<AiClient>();
-                ai.GetComponent<AiClient>().castle = currentCastle;
-            }
-        }
-    }
-
-    private void checkGameDone()
-    {
-        Debug.Log("checking if game is done");
-        if (GameObject.FindGameObjectsWithTag("castle").Length == 1)
-        {
-            Debug.Log("game is finished!");
-            endGame();
-        }
     }
 }

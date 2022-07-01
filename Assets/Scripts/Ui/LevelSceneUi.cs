@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class LevelSceneUi : MonoBehaviour
 {
     private Client client;
+
     private GameObject inGameUi;
     private GameObject optionsUi;
     private GameObject endGameUi;
@@ -41,6 +42,16 @@ public class LevelSceneUi : MonoBehaviour
         endGameUi.SetActive(false);
         optionsUi.SetActive(false);
         inGameUi.SetActive(false);
+    }
+
+    public void setupStartGameUi()
+    {
+        inGameUi.SetActive(true);
+        optionsUi.SetActive(false);
+    }
+    public void setupLevelSceneUi(Client client)
+    {
+        this.client = client;
     }
 
     public void displayDrawPathUi()
@@ -134,11 +145,6 @@ public class LevelSceneUi : MonoBehaviour
     public void toDrawPathState()
     {
         client.toDrawPathState();
-    }
-
-    public void setClient(Client client)
-    {
-        this.client = client;
     }
 
     public void createTower(string towerName)

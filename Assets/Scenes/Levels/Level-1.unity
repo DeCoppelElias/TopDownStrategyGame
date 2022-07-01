@@ -24098,8 +24098,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0.1
   _currentGameState: 2
-  aiClient: {fileID: 0}
-  clients: []
+  aiClient: {fileID: 4865915707187698115, guid: de740b0a92fae7648b4b7c2a9a6eda33, type: 3}
 --- !u!114 &1633712217
 MonoBehaviour:
   m_ObjectHideFlags: 0

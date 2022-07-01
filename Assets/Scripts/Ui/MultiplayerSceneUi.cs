@@ -20,7 +20,6 @@ public class MultiplayerSceneUi : NetworkBehaviour
     }
     public void selectLevel(int level)
     {
-        GameObject.Find("LocalClient").GetComponent<Client>().changeGameState("Normal");
         string levelString = "level-" + level;
         networkManager.ServerChangeScene(levelString);
     }
