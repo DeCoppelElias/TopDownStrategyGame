@@ -28,6 +28,12 @@ public class MainSceneUi : NetworkBehaviour
         mainScreenUi.SetActive(true);
     }
 
+    public void selectCreateLevel()
+    {
+        NetworkManager networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
+        networkManager.ServerChangeScene("CreateLevelScene");
+    }
+
     public void exitGame()
     {
         Application.Quit();

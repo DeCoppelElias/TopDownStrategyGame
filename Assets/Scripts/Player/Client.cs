@@ -40,7 +40,6 @@ public class Client : Player
         else if (SceneManager.GetActiveScene().name != "MultiplayerScene")
         {
             this.clientStateManager = new ClientStateManager(this);
-
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
             this.levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
             this.uiManager.setupLevelSceneUi(this);
@@ -75,6 +74,7 @@ public class Client : Player
     /// <summary>
     /// This method is called when a client wants to leave the game
     /// </summary>
+    [Client]
     public void leaveGame()
     {
         if (!isLocalPlayer) return;
@@ -87,18 +87,9 @@ public class Client : Player
     }
 
     /// <summary>
-    /// Will initialize the level
-    /// </summary>
-    [Client]
-    private void initLevel()
-    {
-        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
-        level.initLevel();
-    }
-
-    /// <summary>
     /// This method is called on the local client when it wants to disconnect
     /// </summary>
+    [Client]
     private void disconnect()
     {
         if (isServer)
@@ -111,6 +102,16 @@ public class Client : Player
             Debug.Log("Stop client");
             NetworkManager.singleton.StopClient();
         }
+    }
+
+    /// <summary>
+    /// Will initialize the level
+    /// </summary>
+    [Client]
+    private void initLevel()
+    {
+        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
+        level.initLevel();
     }
 
     [Client]

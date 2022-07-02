@@ -166,6 +166,7 @@ public abstract class AttackingEntity : Entity
 
     private void updateAttackRingOpacity()
     {
+        if (ServerClient == null) return;
         this.ServerClient.updateAttackRingOfGameObject(this.gameObject, this.attackRingOpacity);
     }
 
@@ -176,6 +177,7 @@ public abstract class AttackingEntity : Entity
 
     private void updateAttackRingScale()
     {
+        if (ServerClient == null) return;
         this.ServerClient.updateAttackRingOfGameObject(this.gameObject, this.attackRingScale);
     }
 }
