@@ -16,4 +16,10 @@ public class DetectEntity : MonoBehaviour
         Troop troop = this.transform.parent.GetComponent<Troop>();
         if (troop) troop.onExitDetect(collision);
     }
+
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        Troop troop = this.transform.parent.GetComponent<Troop>();
+        if (troop) troop.onEnterDetect(collision);
+    }
 }

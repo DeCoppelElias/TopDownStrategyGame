@@ -2,78 +2,85 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.U2D;
 
 public class CameraMovement : MonoBehaviour
 {
-    public int speed = 1;
-    private float targetZoom;
-    private float zoomFactor = 3f;
-    private float lerpSpeed = 10;
-    public float cameraMax_x;
-    public float cameraMax_y;
-    private Camera mainCamera;
+    [SerializeField]
+    private int moveSpeed = 10;
 
-    private int length;
-    private int height;
+    public float cameraMax_x = 0;
+    public float cameraMax_y = 0;
+    public float cameraMin_x = 0;
+    public float cameraMin_y = 0;
+
+    public bool bounded = false;
+    public Vector2 bottomLeft;
+    public Vector2 topRight;
+
+    private Camera mainCamera;
 
     public bool cameraMovement = false;
 
-    private void Start()
+    void Start()
     {
         mainCamera = this.GetComponent<Camera>();
-        targetZoom = mainCamera.orthographicSize;
     }
+
     void Update()
     {
         if (cameraMovement)
         {
-            Vector3 movement = new Vector3(0,0,0);
+            Vector3 movement = new Vector3(0, 0, 0);
             if (Input.GetKey(KeyCode.RightArrow))
             {
-                movement.x += speed * Time.deltaTime;
+                movement.x += moveSpeed * Time.deltaTime;
             }
             if (Input.GetKey(KeyCode.LeftArrow))
             {
-                movement.x -= speed * Time.deltaTime;
+                movement.x -= moveSpeed * Time.deltaTime;
             }
             if (Input.GetKey(KeyCode.DownArrow))
             {
-                movement.y -= speed * Time.deltaTime;
+                movement.y -= moveSpeed * Time.deltaTime;
             }
             if (Input.GetKey(KeyCode.UpArrow))
             {
-                movement.y += speed * Time.deltaTime;
+                movement.y += moveSpeed * Time.deltaTime;
             }
             transform.Translate(movement);
-
-            if (!(cameraMax_x == 0 && cameraMax_y == 0))
+            if (bounded)
             {
-                refreshCameraBounds();
-                transform.position = new Vector3(Mathf.Clamp(transform.position.x, -cameraMax_x, cameraMax_x), Mathf.Clamp(transform.position.y, -cameraMax_y, cameraMax_y), transform.position.z);
-            }
-
-            if (!EventSystem.current.IsPointerOverGameObject())
-            {
-                float scrollData = Input.GetAxis("Mouse ScrollWheel");
-                targetZoom -= scrollData * zoomFactor;
-                targetZoom = Mathf.Clamp(targetZoom, 4.5f, 20f);
-                mainCamera.orthographicSize = Mathf.Lerp(mainCamera.orthographicSize, targetZoom, Time.deltaTime * lerpSpeed);
+                transform.position = new Vector3(Mathf.Clamp(transform.position.x, cameraMin_x, cameraMax_x), Mathf.Clamp(transform.position.y, cameraMin_y, cameraMax_y), transform.position.z);
             }
         }
     }
 
-    public void setCameraBounds(int length, int height)
+    public void setCameraBounds(Vector2 bottomLeft, Vector2 topRight)
     {
-        this.length = length;
-        this.height = height;
+        this.bottomLeft = bottomLeft;
+        this.topRight = topRight;
+        createMaxZoom();
+        bounded = true;
         refreshCameraBounds();
     }
 
-    private void refreshCameraBounds()
+    public void refreshCameraBounds()
     {
+        if (!bounded) return;
         float vertExtent = mainCamera.orthographicSize;
         float horzExtent = vertExtent * Screen.width / Screen.height;
-        cameraMax_x = (length / 2) - horzExtent;
-        cameraMax_y = (height / 2) - vertExtent;
+        cameraMax_x = topRight.x - horzExtent;
+        cameraMax_y = topRight.y - vertExtent;
+        cameraMin_x = bottomLeft.x + horzExtent;
+        cameraMin_y = bottomLeft.y + vertExtent;
+    }
+
+    private void createMaxZoom()
+    {
+        float distX = (this.topRight.x - this.bottomLeft.x) * 0.5f;
+        float distY = (this.topRight.y - this.bottomLeft.y) * 0.5f;
+        float dist = Mathf.Max(distX, distY);
+        this.GetComponent<CameraZoom>().setMaxZoom(dist * Screen.height / Screen.width);
     }
 }

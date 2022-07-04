@@ -29,7 +29,7 @@ public class AVL
 
         public override int GetHashCode()
         {
-            return this.tilePosition.x * 100000 + tilePosition.y;
+            return this.tilePosition.x * 1000000 + tilePosition.y;
         }
     }
 

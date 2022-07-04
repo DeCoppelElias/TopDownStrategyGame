@@ -50,3 +50,15 @@ TagManager:
   - name: Troop
     uniqueID: 340317993
     locked: 0
+  - name: Decoration
+    uniqueID: 2877599971
+    locked: 0
+  - name: Preview
+    uniqueID: 2317145807
+    locked: 0
+  - name: Selecting
+    uniqueID: 1560815423
+    locked: 0
+  - name: Testing
+    uniqueID: 3713909313
+    locked: 0

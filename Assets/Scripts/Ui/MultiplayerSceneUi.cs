@@ -20,8 +20,8 @@ public class MultiplayerSceneUi : NetworkBehaviour
     }
     public void selectLevel(int level)
     {
-        string levelString = "level-" + level;
-        networkManager.ServerChangeScene(levelString);
+        Level.level = level;
+        networkManager.ServerChangeScene("Level");
     }
 
     public void activateSelectLevelUi()

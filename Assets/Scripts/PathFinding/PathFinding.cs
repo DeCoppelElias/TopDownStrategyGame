@@ -8,12 +8,18 @@ using static AVL;
 public class PathFinding : MonoBehaviour
 {
     [SerializeField]
-    private bool debug = false;
+    private bool display = false;
+    [SerializeField]
+    private float displayActiveTime = 1;
+    private enum DebugState {Offline, SelectingStart, SelectingFinish, Searching, Done}
+    [SerializeField]
+    private DebugState debugState = DebugState.Offline;
+    private bool debugFinished;
 
     [SerializeField]
-    private Vector3Int start = new Vector3Int(0,0,0);
+    private Vector3Int debugStart = new Vector3Int(0, 0, 0);
     [SerializeField]
-    private Vector3Int finish = new Vector3Int(0, 0, 0);
+    private Vector3Int debugFinish = new Vector3Int(0, 0, 0);
 
     [SerializeField]
     private Tilemap obstacleTilemap;
@@ -31,16 +37,44 @@ public class PathFinding : MonoBehaviour
     private Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
     private Node currentNode;
     private int counter = 0;
-    private bool searching = false;
-
-    private void Start()
-    {
-        if (debug) Invoke("findPathDebug", 1);
-    }
 
     private void Update()
     {
-        debugUpdate();
+        if (debugState == DebugState.SelectingStart)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                this.debugStart = Vector3Int.FloorToInt(getMousePosition());
+                this.debugState = DebugState.SelectingFinish;
+            }
+        }
+        else if (debugState == DebugState.SelectingFinish)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                this.debugFinish = Vector3Int.FloorToInt(getMousePosition());
+
+                findPathDebug();
+                this.debugState = DebugState.Searching;
+                this.displayTilemap.ClearAllTiles();
+            }
+        }
+        else if (debugState == DebugState.Searching)
+        {
+            debugUpdate();
+
+            if (debugFinished)
+            {
+                resetDebug();
+            }
+        }
+    }
+
+    private Vector3 getMousePosition()
+    {
+        Vector3 result = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        result.z = 0;
+        return result;
     }
 
     /// <summary>
@@ -48,7 +82,7 @@ public class PathFinding : MonoBehaviour
     /// </summary>
     private void debugUpdate()
     {
-        if (searching && Time.time - lastUpdate > debugUpdateSpeed)
+        if (Time.time - lastUpdate > debugUpdateSpeed)
         {
             findPathStep();
             lastUpdate = Time.time;
@@ -63,6 +97,10 @@ public class PathFinding : MonoBehaviour
     /// <returns></returns>
     public List<Vector2> findPath(Vector3Int start, Vector3Int finish)
     {
+        if (display)
+        {
+            displayTilemap.ClearAllTiles();
+        }
         int counter = 0;
         Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
         AVL avlTree = new AVL();
@@ -74,6 +112,11 @@ public class PathFinding : MonoBehaviour
         Node currentNode = avlTree.PopMinValue();
         while(currentNode.tilePosition != finish && counter < 10000)
         {
+            if (display)
+            {
+                displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
+            }
+
             counter++;
             List<Vector3Int> neighbors = getNeighbors(currentNode.tilePosition);
             foreach (Vector3Int neighborPosition in neighbors)
@@ -108,13 +151,25 @@ public class PathFinding : MonoBehaviour
         {
             Vector2 currentPosition = (Vector3)currentNode.tilePosition;
             path.Add(currentPosition + new Vector2(0.5f,0.5f));
+            if (display)
+            {
+                displayTilemap.SetTile(currentNode.tilePosition, displayPathTile);
+            }
             currentNode = currentNode.previousNode;
         }
         Vector2 lastPosition = (Vector3)currentNode.tilePosition;
         path.Add(lastPosition);
         path.Reverse();
 
+        Invoke("clearDisplay", this.displayActiveTime);
         return path;
+    }
+    public List<Vector2> findPath(Vector3 s, Vector3 f)
+    {
+        Vector3Int start = Vector3Int.FloorToInt(s);
+        Vector3Int finish = Vector3Int.FloorToInt(f);
+
+        return findPath(start, finish);
     }
 
     /// <summary>
@@ -122,15 +177,17 @@ public class PathFinding : MonoBehaviour
     /// </summary>
     private void findPathDebug()
     {
-        if (obstacleTilemap.GetTile(start))
+        if (obstacleTilemap.GetTile(debugStart))
         {
-            searching = false;
-            throw new Exception("Start is an obstacle");
+            Debug.Log("Start is an obstacle");
+            resetDebug();
+            return;
         }
-        else if (obstacleTilemap.GetTile(finish))
+        else if (obstacleTilemap.GetTile(debugFinish))
         {
-            searching = false;
-            throw new Exception("Finish is an obstacle");
+            Debug.Log("Finish is an obstacle");
+            resetDebug();
+            return;
         }
         else
         {
@@ -138,14 +195,24 @@ public class PathFinding : MonoBehaviour
             this.storedNodes = new Dictionary<int, Node>();
             this.avlTree = new AVL();
 
-            Node firstNode = new Node(0, 0, start, null);
+            Node firstNode = new Node(0, 0, debugStart, null);
             avlTree.Add(firstNode);
             storedNodes.Add(firstNode.GetHashCode(), firstNode);
 
             this.currentNode = avlTree.PopMinValue();
-            this.searching = true;
             displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
         }
+    }
+
+    private void resetDebug()
+    {
+        this.debugState = DebugState.Done;
+        this.debugFinished = false;
+    }
+
+    private void clearDisplay()
+    {
+        this.displayTilemap.ClearAllTiles();
     }
 
     /// <summary>
@@ -155,13 +222,14 @@ public class PathFinding : MonoBehaviour
     {
         try
         {
-            if (currentNode.tilePosition != finish && counter < 10000)
+            displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
+            if (currentNode.tilePosition != debugFinish && counter < 10000)
             {
                 counter++;
                 List<Vector3Int> neighbors = getNeighbors(currentNode.tilePosition);
                 foreach (Vector3Int neighborPosition in neighbors)
                 {
-                    float distanceToFinish = Vector3Int.Distance(neighborPosition, finish);
+                    float distanceToFinish = Vector3Int.Distance(neighborPosition, debugFinish);
                     float distancePath = currentNode.distancePath + Vector3Int.Distance(currentNode.tilePosition, neighborPosition);
                     Node neighborNode = new Node(distancePath, distanceToFinish, neighborPosition, currentNode);
                     int hashCode = neighborNode.GetHashCode();
@@ -185,7 +253,6 @@ public class PathFinding : MonoBehaviour
                     }
                 }
                 currentNode = avlTree.PopMinValue();
-                displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
             }
             else if (counter < 10000)
             {
@@ -197,7 +264,6 @@ public class PathFinding : MonoBehaviour
                     currentNode = currentNode.previousNode;
                 }
                 path.Reverse();
-                searching = false;
 
                 string resultString = "Found path:";
                 foreach (Vector3 position in path)
@@ -205,20 +271,20 @@ public class PathFinding : MonoBehaviour
                     resultString += " " + position + " ";
                 }
                 Debug.Log(resultString);
+                this.debugFinished = true;
+                
             }
             else
             {
                 Debug.Log("No path was found");
-                searching = false;
             }
         }
-        catch(Exception execption)
+        catch(Exception exception)
         {
-            searching = false;
             Debug.Log("Counter: " + counter);
-            Debug.Log(execption.Message);
-            Debug.Log(execption.StackTrace);
-            throw execption;
+            Debug.Log(exception.Message);
+            Debug.Log(exception.StackTrace);
+            throw exception;
         }
     }
 

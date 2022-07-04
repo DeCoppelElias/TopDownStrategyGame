@@ -192,6 +192,7 @@ public class LevelSceneServer : NetworkBehaviour
         if (GameObject.FindGameObjectsWithTag("castle").Length == 1)
         {
             Debug.Log("game is finished!");
+            this._currentGameState = GameState.Pause;
             endGame();
         }
     }

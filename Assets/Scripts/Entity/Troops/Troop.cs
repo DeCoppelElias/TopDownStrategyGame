@@ -50,53 +50,56 @@ public abstract class Troop : AttackingEntity
     {
         if (_currentEntityState.Equals(EntityState.Normal))
         {
-            if (_path.Count > 0)
-            {
-                Vector2 currentPosition = transform.position;
-                if (Vector2.Distance(currentPosition, _path[0]) < 0.3)
-                {
-                    _path.RemoveAt(0);
-                }
-                else
-                {
-                    var step = _speed * Time.deltaTime;
-                    transform.position = Vector3.MoveTowards(transform.position, _path[0], step);
-                }
-            }
-            else
-            {
-                // Searching for closest castle and attacking it
-                Castle closestCastle = null;
-                float smallestDistance = float.MaxValue;
-                foreach(Castle castle in GameObject.Find("Castles").GetComponentsInChildren<Castle>())
-                {
-                    float distance = Vector3.Distance(castle.transform.position, this.transform.position);
-                    if(distance < smallestDistance && castle.Owner != this.Owner)
-                    {
-                        smallestDistance = distance;
-                        closestCastle = castle;
-                    }
-                }
-                if(closestCastle == null) { return; }
-                PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-                _path = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(closestCastle.transform.position));
-            }
+            normalState();
         }
         if (_currentEntityState.Equals(EntityState.WalkingToTarget))
         {
-            if (_currentTarget)
-            {
-                var step = _speed * Time.deltaTime;
-                transform.position = Vector3.MoveTowards(transform.position, _currentTarget.transform.position, step);
-            }
-            else
-            {
-                _currentEntityState = EntityState.Normal;
-            }
+            walkingToTargetState();
         }
         if (_currentEntityState.Equals(EntityState.Attacking))
         {
             attackTarget();
+        }
+    }
+
+    private void normalState()
+    {
+        if (_path.Count > 0)
+        {
+            Vector2 currentPosition = transform.position;
+            if (Vector2.Distance(currentPosition, _path[0]) < 0.3)
+            {
+                _path.RemoveAt(0);
+            }
+            var step = _speed * Time.deltaTime;
+            transform.position = Vector3.MoveTowards(transform.position, _path[0], step);
+        }
+        else
+        {
+            // Searching for closest castle and attacking it
+            Castle closestCastle = null;
+            float smallestDistance = float.MaxValue;
+            foreach (Castle castle in GameObject.Find("Castles").GetComponentsInChildren<Castle>())
+            {
+                float distance = Vector3.Distance(castle.transform.position, this.transform.position);
+                if (distance < smallestDistance && castle.Owner != this.Owner)
+                {
+                    smallestDistance = distance;
+                    closestCastle = castle;
+                }
+            }
+            if (closestCastle == null) { return; }
+            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+            _path = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(closestCastle.transform.position));
+        }
+    }
+
+    private void walkingToTargetState()
+    {
+        if (_currentTarget != null)
+        {
+            var step = _speed * Time.deltaTime;
+            transform.position = Vector3.MoveTowards(this.transform.position, _currentTarget.transform.position, step);
         }
     }
 
@@ -121,6 +124,12 @@ public abstract class Troop : AttackingEntity
         if (_targetsToFollow.Count == 0 && _targetsToAttack.Count == 0)
         {
             _currentTarget = null;
+
+            PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+            List<Vector2> newPath = pathFinding.findPath(this.transform.position, _path[0]);
+            newPath.AddRange(_path);
+            _path = newPath;
+
             _currentEntityState = AttackingEntity.EntityState.Normal;
             this.detectRingOpacity = 0.2f;
             this.attackRingOpacity = 0.2f;
@@ -175,14 +184,42 @@ public abstract class Troop : AttackingEntity
         Entity entity = collision.GetComponent<Entity>();
         if (entity && _serverClient && entity.ServerClient && _owner != entity.Owner)
         {
-            //Debug.Log("adding to targets to follow: " + entity);
-            this._targetsToFollow.Add(entity);
-            if (_currentTarget == null)
+            RaycastHit2D[] hits = Physics2D.LinecastAll(this.transform.position, entity.transform.position);
+            bool visible = true;
+            foreach(RaycastHit2D hit in hits)
             {
-                _currentTarget = entity;
-                _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
-                this.detectRingOpacity = 1f;
-                //Debug.Log(this + " follows " + _currentTarget);
+                if(hit.transform.tag == "wall")
+                {
+                    visible = false;
+                    break;
+                }
+            }
+
+            if (visible)
+            {
+                //Debug.Log("adding to targets to follow: " + entity);
+                if (!this._targetsToFollow.Contains(entity))
+                {
+                    this._targetsToFollow.Add(entity);
+                }
+                if (_currentTarget == null)
+                {
+                    _currentTarget = entity;
+                    _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
+                    this.detectRingOpacity = 1f;
+                    //Debug.Log(this + " follows " + _currentTarget);
+                }
+            }
+            else
+            {
+                if (this._targetsToFollow.Contains(entity))
+                {
+                    _targetsToFollow.Remove(entity);
+                }
+                if (_currentTarget == entity)
+                {
+                    searchNewTarget();
+                }
             }
         }
     }

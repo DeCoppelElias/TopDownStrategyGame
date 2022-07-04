@@ -54,9 +54,9 @@ public class Client : Player
 
             findServerClient();
 
-            findCastleForClient(this.gameObject);
+            Invoke("findCastleForClient", 0.5f);
 
-            this.levelSceneServer.registerClient(this.gameObject);
+            Invoke("registerClient", 1f);
         }
     }
     private void Update()
@@ -69,6 +69,18 @@ public class Client : Player
                 clientUpdate();
             }
         }
+    }
+
+    [Client]
+    public void registerClient()
+    {
+        this.levelSceneServer.registerClient(this.gameObject);
+    }
+
+    [Client]
+    public void findCastleForClient()
+    {
+        findCastleForClient(this.gameObject);
     }
 
     /// <summary>
