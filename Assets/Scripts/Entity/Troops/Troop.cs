@@ -108,12 +108,12 @@ public abstract class Troop : AttackingEntity
     /// </summary>
     protected override void killTarget()
     {
-        _currentEntityState = EntityState.Normal;
         //Debug.Log("Killing target: " + this._currentTarget);
         this._targetsToAttack.Remove(this._currentTarget);
         this._targetsToFollow.Remove(this._currentTarget);
         this._currentTarget.getKilled();
         this._currentTarget = null;
+        toNormalState();
     }
 
     /// <summary>
@@ -130,26 +130,41 @@ public abstract class Troop : AttackingEntity
             newPath.AddRange(_path);
             _path = newPath;
 
-            _currentEntityState = AttackingEntity.EntityState.Normal;
-            this.detectRingOpacity = 0.2f;
-            this.attackRingOpacity = 0.2f;
+            toNormalState();
         }
         else if (_targetsToAttack.Count > 0)
         {
             _currentTarget = _targetsToAttack[0];
-            _currentEntityState = AttackingEntity.EntityState.Attacking;
-            this.detectRingOpacity = 1f;
-            this.attackRingOpacity = 1f;
+            toAttackingState();
         }
         else if (_targetsToFollow.Count > 0)
         {
             _currentTarget = _targetsToFollow[0];
-            _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
-            this.detectRingOpacity = 1f;
-            this.attackRingOpacity = 0.2f;
+            toWalkingToTargetState();
         }
     }
 
+    private void toAttackingState()
+    {
+        _currentEntityState = AttackingEntity.EntityState.Attacking;
+        this.detectRingOpacity = 1f;
+        this.attackRingOpacity = 1f;
+    }
+
+    private void toWalkingToTargetState()
+    {
+        _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
+        this.detectRingOpacity = 1f;
+        this.attackRingOpacity = 0.2f;
+    }
+
+    private void toNormalState()
+    {
+        _currentTarget = null;
+        _currentEntityState = AttackingEntity.EntityState.Normal;
+        this.detectRingOpacity = 0.2f;
+        this.attackRingOpacity = 0.2f;
+    }
     /// <summary>
     /// This method is called when an entity is killed. It does all the needed procedures before actually deleting the object
     /// </summary>
@@ -205,8 +220,7 @@ public abstract class Troop : AttackingEntity
                 if (_currentTarget == null)
                 {
                     _currentTarget = entity;
-                    _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
-                    this.detectRingOpacity = 1f;
+                    toWalkingToTargetState();
                     //Debug.Log(this + " follows " + _currentTarget);
                 }
             }

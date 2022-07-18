@@ -8,25 +8,58 @@ using UnityEngine.UI;
 
 public class CreateLevelManager : MonoBehaviour
 {
+    // Selected objects
     private Tile selectedTile;
     private Tilemap selectedTileMap;
     private GameObject selectedGameObject;
 
+    // Tilemaps
     private Tilemap floorTilemap;
     private Tilemap wallsTilemap;
     private Tilemap decorationTilemap;
     private Tilemap previewTilemap;
-
     private Tilemap selectingTilemap;
-    private GameObject selectingGameObject;
-    private GameObject cursorSize;
-    private SelectingTile customSelectingTile;
 
+    // Scrollviews
     private GameObject tileScrollView;
     private GameObject gameObjectScrollView;
 
-    private SelectedTiles selectedTiles;
+    // others
+    private GameObject selectingGameObject;
+    private SelectingTile customSelectingTile;
 
+    // Current building state
+    private enum BuildingState { BuildingTiles, BuildingGameObjects, Viewing, Selecting, Paste}
+    private BuildingState buildingState = BuildingState.Viewing;
+
+    // Main Ui Elements
+    private GameObject buildingTilesUi;
+    private GameObject buildingGameObjectsUi;
+    private GameObject basicUi;
+    private GameObject infoPanel;
+    private GameObject canvas;
+
+    // Basic Ui Elements
+    private GameObject mainButtons;
+    private GameObject levelOptions;
+    private GameObject buildOptions;
+    private GameObject selectOptions;
+
+    // Infopanel Elements
+    private TMP_Text buildingStateInfo;
+    private TMP_Text selectedTileText;
+    private TMP_Text selectedTilemapText;
+    private TMP_Text selectedGameObjectText;
+    private GameObject buildingTileInfo;
+    private GameObject buildingGameObjectInfo;
+
+    // Storing building size
+    private int buildingSize = 1;
+
+
+
+    // Storing the selected tiles information
+    private SelectedTiles selectedTiles;
     private class SelectedTiles
     {
         public List<SelectedTileGroup> tileGroups;
@@ -78,62 +111,58 @@ public class CreateLevelManager : MonoBehaviour
 
     private Vector2Int startSelectingPoint;
     private Vector2Int endSelectingPoint;
-    private enum BuildingState { BuildingTiles, BuildingGameObjects, Viewing, Selecting, Paste}
-    private BuildingState buildingState = BuildingState.Viewing;
-
-    private TMP_Text buildingStateInfo;
-    private TMP_Text selectedTileText;
-    private TMP_Text selectedTilemapText;
-    private TMP_Text selectedGameObjectText;
-    private GameObject buildingTileInfo;
-    private GameObject buildingGameObjectInfo;
-    private GameObject InfoPanel;
-
-    private GameObject selectTileMapButtons;
-
-    private GameObject copyToCursorButton;
-
-    private int buildingSize = 1;
     private void Start()
     {
-        this.selectTileMapButtons = GameObject.Find("SelectTileMapButtons");
-        this.selectTileMapButtons.SetActive(false);
-
-        this.floorTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
-        this.wallsTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
-        this.decorationTilemap = GameObject.Find("Decoration").GetComponent<Tilemap>();
-        this.previewTilemap = GameObject.Find("Preview").GetComponent<Tilemap>();
-
-        this.selectingTilemap = GameObject.Find("Selecting").GetComponent<Tilemap>();
+        // Creating the selecting Gameobject for the build gameobject state
         this.selectingGameObject = Instantiate((GameObject)Resources.Load("Prefabs/SelectingGameObject"), new Vector3(0, 0, 0), Quaternion.identity);
         this.selectingGameObject.SetActive(false);
+
+        // Finding and storing the custom selecting tile
         this.customSelectingTile = (SelectingTile)Resources.Load("Tiles/SelectingTile");
-        this.cursorSize = GameObject.Find("CursorSize");
-        this.cursorSize.SetActive(false);
 
-        this.InfoPanel = GameObject.Find("InfoPanel");
-        this.InfoPanel.SetActive(false);
-        this.buildingTileInfo = InfoPanel.transform.Find("BuildingTileInfo").gameObject;
-        this.buildingTileInfo.SetActive(false);
-        this.buildingGameObjectInfo = InfoPanel.transform.Find("BuildingGameObjectInfo").gameObject;
-        this.buildingGameObjectInfo.SetActive(false);
+        // Finding tile scrollwheels
+        this.tileScrollView = GameObject.Find("TileScrollView");
+        this.gameObjectScrollView = GameObject.Find("GameObjectScrollView");
 
-        this.buildingStateInfo = InfoPanel.transform.Find("BuildingState").GetComponent<TMP_Text>();
+        // Finding and clearing all tilemaps
+        this.selectingTilemap = GameObject.Find("Selecting").GetComponent<Tilemap>();
+        this.selectingTilemap.ClearAllTiles();
+        this.floorTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
+        this.floorTilemap.ClearAllTiles();
+        this.wallsTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
+        this.wallsTilemap.ClearAllTiles();
+        this.decorationTilemap = GameObject.Find("Decoration").GetComponent<Tilemap>();
+        this.decorationTilemap.ClearAllTiles();
+        this.previewTilemap = GameObject.Find("Preview").GetComponent<Tilemap>();
+        this.previewTilemap.ClearAllTiles();
+
+        // Finding Main Ui Elements and deactivating when neccessary
+        this.basicUi = GameObject.Find("BasicUi");
+        this.buildingTilesUi = GameObject.Find("BuildingTilesUi");
+        this.buildingTilesUi.SetActive(false);
+        this.buildingGameObjectsUi = GameObject.Find("BuildingGameObjectsUi");
+        this.buildingGameObjectsUi.SetActive(false);
+        this.infoPanel = GameObject.Find("InfoPanel");
+        this.infoPanel.SetActive(false);
+        this.canvas = GameObject.Find("Canvas");
+
+        // Finding Basic Ui Elements
+        this.mainButtons = basicUi.transform.Find("Main Buttons").gameObject;
+        this.levelOptions = basicUi.transform.Find("Level Options").gameObject;
+        this.buildOptions = basicUi.transform.Find("Build Options").gameObject;
+        this.selectOptions = basicUi.transform.Find("Select Options").gameObject;
+        resetBasicUi();
+
+        // Finding InfoPanel Elements
+        this.buildingTileInfo = infoPanel.transform.Find("BuildingTileInfo").gameObject;
+        this.buildingGameObjectInfo = infoPanel.transform.Find("BuildingGameObjectInfo").gameObject;
+
+        this.buildingStateInfo = infoPanel.transform.Find("BuildingState").GetComponent<TMP_Text>();
         this.selectedTileText = buildingTileInfo.transform.Find("Current Tile").GetComponent<TMP_Text>();
         this.selectedTilemapText = buildingTileInfo.transform.Find("Current Tilemap").GetComponent<TMP_Text>();
         this.selectedGameObjectText = buildingGameObjectInfo.transform.Find("Current GameObject").GetComponent<TMP_Text>();
 
-        this.tileScrollView = GameObject.Find("TileScrollView");
-        this.tileScrollView.SetActive(false);
-        this.gameObjectScrollView = GameObject.Find("GameObjectScrollView");
-        this.gameObjectScrollView.SetActive(false);
-
-        this.selectFloor();
-        this.selectErasor();
-
-        this.copyToCursorButton = GameObject.Find("CopyToCursor");
-        this.copyToCursorButton.SetActive(false);
-
+        // Creating buttons for selecting tiles to build
         GameObject buttonPrefab = Resources.Load("Prefabs/Button") as GameObject;
         foreach (UnityEngine.Object obj in Resources.LoadAll("Tiles/BuildableTiles"))
         {
@@ -143,6 +172,7 @@ public class CreateLevelManager : MonoBehaviour
             }
         }
 
+        // Creating buttons for selecting gameobjects to build
         GameObject castleGameObject = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
         createGameObjectButton(castleGameObject, buttonPrefab);
     }
@@ -174,6 +204,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update actions in the paste state
+    /// </summary>
     private void pasteState()
     {
         this.createSelectedTilesPreview();
@@ -192,6 +225,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update actions in the building tiles state
+    /// </summary>
     private void buildingTilesState()
     {
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -211,6 +247,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update actions in the building gameobjects state
+    /// </summary>
     private void buildingGameObjectsState()
     {
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -251,6 +290,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update acitons in the selecting state
+    /// </summary>
     private void selectingState()
     {
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -272,6 +314,11 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a selecting rectangle with the given positions, uses the custom selecting tile
+    /// </summary>
+    /// <param name="pos1"></param>
+    /// <param name="pos2"></param>
     private void createSelectingGrid(Vector2Int pos1, Vector2Int pos2)
     {
         this.selectingTilemap.ClearAllTiles();
@@ -293,7 +340,6 @@ public class CreateLevelManager : MonoBehaviour
             this.selectingTilemap.SetTile(new Vector3Int(topRight.x, y, 0), this.customSelectingTile);
         }
     }
-
     private void createSelectingGrid(Vector3Int pos1, Vector3Int pos2)
     {
         this.selectingTilemap.ClearAllTiles();
@@ -316,14 +362,18 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
-    private void createSelectingGrid(Vector3Int pos)
+    /// <summary>
+    /// Creates a selecting rectangle with the given position, uses the custom selecting tile
+    /// </summary>
+    /// <param name="mousePosition"></param> the position of the mouse as middle of the selecting grid
+    private void createSelectingGrid(Vector3Int mousePosition)
     {
         this.selectingTilemap.ClearAllTiles();
 
-        int minX = pos.x - (this.buildingSize - 1);
-        int maxX = pos.x + (this.buildingSize - 1);
-        int minY = pos.y - (this.buildingSize - 1);
-        int maxY = pos.y + (this.buildingSize - 1);
+        int minX = mousePosition.x - (this.buildingSize - 1);
+        int maxX = mousePosition.x + (this.buildingSize - 1);
+        int minY = mousePosition.y - (this.buildingSize - 1);
+        int maxY = mousePosition.y + (this.buildingSize - 1);
 
         Vector2Int bottomLeft = new Vector2Int(minX, minY);
         Vector2Int topRight = new Vector2Int(maxX, maxY);
@@ -343,6 +393,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a preview on the previewTilemap of the selected tiles
+    /// </summary>
     private void createSelectedTilesPreview()
     {
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -359,6 +412,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Will place the selected tiles on the current mouse position
+    /// </summary>
     private void placeSelectedTiles()
     {
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -375,6 +431,13 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Will place a square of tiles on the specified tilemap, this size is determined by the current buildingsize
+    /// </summary>
+    /// <param name="pos"></param> middle of the square
+    /// <param name="tile"></param>
+    /// <param name="tilemap"></param>
+    /// <param name="clear"></param> true => clears tilemap, false => does not clear tilemap
     private void setTileFull(Vector3Int pos, Tile tile, Tilemap tilemap, bool clear)
     {
         if (clear) tilemap.ClearAllTiles();
@@ -391,6 +454,13 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Will place the sides of a square of tiles on the specified tilemap, this size is determined by the current buildingsize
+    /// </summary>
+    /// <param name="pos"></param>
+    /// <param name="tile"></param>
+    /// <param name="tilemap"></param>
+    /// <param name="clear"></param>
     private void setTileSides(Vector3Int pos, Tile tile, Tilemap tilemap, bool clear)
     {
         if (clear) tilemap.ClearAllTiles();
@@ -410,9 +480,14 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a button for selecting the given tile
+    /// </summary>
+    /// <param name="tile"></param>
+    /// <param name="ButtonPrefab"></param>
     private void createTileButton(Tile tile, GameObject ButtonPrefab)
     {
-        GameObject buttonGameobjectTile = Instantiate(ButtonPrefab, tileScrollView.transform.Find("Viewport").transform.Find("Content"));
+        GameObject buttonGameobjectTile = Instantiate(ButtonPrefab, this.tileScrollView.transform.Find("Viewport").transform.Find("Content"));
         buttonGameobjectTile.GetComponent<Image>().sprite = tile.sprite;
         buttonGameobjectTile.GetComponent<Image>().color = tile.color;
         buttonGameobjectTile.GetComponent<Button>().onClick.AddListener(delegate { setTile(tile); });
@@ -420,6 +495,11 @@ public class CreateLevelManager : MonoBehaviour
         tileNameGameObject.GetComponent<TMP_Text>().text = tile.name;
     }
 
+    /// <summary>
+    /// Creates a button for selecting the given gameobject
+    /// </summary>
+    /// <param name="gameObject"></param>
+    /// <param name="ButtonPrefab"></param>
     private void createGameObjectButton(GameObject gameObject, GameObject ButtonPrefab)
     {
         SpriteRenderer spriteRenderer2D = gameObject.GetComponent<SpriteRenderer>();
@@ -431,6 +511,10 @@ public class CreateLevelManager : MonoBehaviour
         gameObjectName.GetComponent<TMP_Text>().text = gameObject.name;
     }
 
+    /// <summary>
+    /// Updates the building size, cannot be lower than 1
+    /// </summary>
+    /// <param name="size"></param>
     private void updateBuildingSize(int size)
     {
         this.buildingSize = size;
@@ -440,9 +524,56 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Will reset the basic Ui to its original state
+    /// </summary>
+    private void resetBasicUi()
+    {
+        this.levelOptions.SetActive(false);
+        this.buildOptions.SetActive(false);
+        this.selectOptions.SetActive(false);
+    }
 
+    /// <summary>
+    /// Will reset the full Ui to its original state. It will deactivate all Ui except the basic Ui
+    /// </summary>
+    private void resetUi()
+    {
+        foreach (Transform uiElement in this.canvas.GetComponentInChildren<Transform>())
+        {
+            if (uiElement.name != "BasicUi")
+            {
+                uiElement.gameObject.SetActive(false);
+            }
+        }
 
+        this.basicUi.SetActive(true);
+    }
 
+    /// <summary>
+    /// Will reset the info panel to its original state
+    /// </summary>
+    private void resetInfoPanel()
+    {
+        this.buildingStateInfo.text = "";
+        this.selectedTileText.text = "";
+        this.selectedTilemapText.text = "";
+        this.selectedGameObjectText.text = "";
+    }
+
+    /// <summary>
+    /// Will reset the selected Tile, Tilemap and Gameobject
+    /// </summary>
+    private void resetSelected()
+    {
+        this.selectedTileMap = floorTilemap;
+        this.selectedTile = null;
+        this.selectedGameObject = null;
+    }
+
+    /// <summary>
+    /// Stores the selected tiles
+    /// </summary>
     public void copyToCursor()
     {
         List<SelectedTileGroup> selectedTileGroups = new List<SelectedTileGroup>();
@@ -495,60 +626,104 @@ public class CreateLevelManager : MonoBehaviour
         this.selectedTiles = new SelectedTiles(selectedTileGroups, bottomLeft - middlePos, topRight - middlePos);
     }
 
+    /// <summary>
+    /// Increases building size by one
+    /// </summary>
     public void increaseBuildingSize()
     {
         updateBuildingSize(this.buildingSize + 1);
     }
 
+    /// <summary>
+    /// Decreases building size by one
+    /// </summary>
     public void decreaseBuildingSize()
     {
         if (this.buildingSize == 1) return;
         updateBuildingSize(this.buildingSize - 1);
     }
+
+    /// <summary>
+    /// Sets the selected tile and updates the infopanel
+    /// </summary>
+    /// <param name="tile"></param>
     public void setTile(Tile tile)
     {
         this.selectedTile = tile;
-        this.selectedTileText.text = "Tile: " + tile.name;
+
+        if(tile == null)
+        {
+            this.selectedTileText.text = "Erasing Tiles";
+        }
+        else
+        {
+            this.selectedTileText.text = "Tile: " + tile.name;
+        }
     }
 
+    /// <summary>
+    /// Sets the selected gameobject and updates the infopanel
+    /// </summary>
+    /// <param name="gameObject"></param>
     public void setGameObject(GameObject gameObject)
     {
         this.selectedGameObject = gameObject;
-        this.selectedGameObjectText.text = "GameObject: " + gameObject.name;
+
+        if(gameObject == null)
+        {
+            this.selectedGameObjectText.text = "Erasing GameObjects";
+        }
+        else
+        {
+            this.selectedGameObjectText.text = "GameObject: " + gameObject.name;
+        }
     }
 
+    /// <summary>
+    /// Select the floor tilemap and update the infopanel
+    /// </summary>
     public void selectFloor()
     {
         this.selectedTileMap = floorTilemap;
         this.selectedTilemapText.text = "Tilemap: " + floorTilemap.name;
     }
 
+    /// <summary>
+    /// Select the wall tilemap and update the infopanel
+    /// </summary>
     public void selectWalls()
     {
         this.selectedTileMap = wallsTilemap;
         this.selectedTilemapText.text = "Tilemap: " + wallsTilemap.name;
     }
 
+    /// <summary>
+    /// Select the decoration tilemap and update the infopanel
+    /// </summary>
     public void selectDecoration()
     {
         this.selectedTileMap = decorationTilemap;
         this.selectedTilemapText.text = "Tilemap: " + decorationTilemap.name;
     }
 
+    /// <summary>
+    /// Selects the erasor
+    /// </summary>
     public void selectErasor()
     {
         if(buildingState == BuildingState.BuildingTiles)
         {
-            this.selectedTile = null;
-            this.selectedTileText.text = "Erasing Tiles";
+            setTile(null);
         }
         if (buildingState == BuildingState.BuildingGameObjects)
         {
-            this.selectedGameObject = null;
-            this.selectedGameObjectText.text = "Erasing GameObjects";
+            setGameObject(null);
         }
     }
 
+    /// <summary>
+    /// Clears the level by clearing the tilemap and deleting gameobjects
+    /// </summary>
     public void clearLevel()
     {
         this.wallsTilemap.ClearAllTiles();
@@ -557,6 +732,9 @@ public class CreateLevelManager : MonoBehaviour
         deleteCastles();
     }
 
+    /// <summary>
+    /// Deletes all castles
+    /// </summary>
     private void deleteCastles()
     {
         GameObject castles = GameObject.Find("Castles");
@@ -568,43 +746,37 @@ public class CreateLevelManager : MonoBehaviour
 
     public void toBuildTileState()
     {
-        this.InfoPanel.SetActive(true);
-        this.tileScrollView.SetActive(true);
-        this.buildingTileInfo.SetActive(true);
-        this.selectTileMapButtons.SetActive(true);
-        this.cursorSize.SetActive(true);
-        this.updateBuildingSize(1);
-        this.gameObjectScrollView.SetActive(false);
-        this.buildingGameObjectInfo.SetActive(false);
-        this.copyToCursorButton.SetActive(false);
+        resetInfoPanel();
+        resetSelected();
+        resetUi();
+
+        setTile(null);
+        selectFloor();
+
+        this.buildingTilesUi.SetActive(true);
+        this.infoPanel.SetActive(true);
+
         this.buildingState = BuildingState.BuildingTiles;
         this.buildingStateInfo.text = "Building Tiles";
     }
 
     public void toBuildGameObjectState()
     {
-        this.InfoPanel.SetActive(true);
-        this.tileScrollView.SetActive(false);
-        this.buildingTileInfo.SetActive(false);
-        this.selectTileMapButtons.SetActive(false);
-        this.cursorSize.SetActive(false);
-        this.copyToCursorButton.SetActive(false);
-        this.gameObjectScrollView.SetActive(true);
-        this.buildingGameObjectInfo.SetActive(true);
+        resetInfoPanel();
+        resetSelected();
+        resetUi();
+        this.buildingGameObjectsUi.SetActive(true);
+        this.infoPanel.SetActive(true);
+
+        setGameObject(null);
+
         this.buildingState = BuildingState.BuildingGameObjects;
         this.buildingStateInfo.text = "PlacingGameObjects";
     }
 
     public void toViewState()
     {
-        this.InfoPanel.SetActive(false);
-        this.tileScrollView.SetActive(false);
-        this.buildingTileInfo.SetActive(false);
-        this.selectTileMapButtons.SetActive(false);
-        this.cursorSize.SetActive(false);
-        this.gameObjectScrollView.SetActive(false);
-        this.buildingGameObjectInfo.SetActive(false);
-        this.copyToCursorButton.SetActive(false);
+        resetUi();
 
         this.previewTilemap.ClearAllTiles();
         this.selectingTilemap.ClearAllTiles();
@@ -614,14 +786,7 @@ public class CreateLevelManager : MonoBehaviour
 
     public void toSelectState()
     {
-        this.InfoPanel.SetActive(false);
-        this.tileScrollView.SetActive(false);
-        this.buildingTileInfo.SetActive(false);
-        this.selectTileMapButtons.SetActive(false);
-        this.cursorSize.SetActive(false);
-        this.gameObjectScrollView.SetActive(false);
-        this.buildingGameObjectInfo.SetActive(false);
-        this.copyToCursorButton.SetActive(true);
+        resetUi();
 
         this.previewTilemap.ClearAllTiles();
         this.selectingTilemap.ClearAllTiles();
@@ -632,14 +797,8 @@ public class CreateLevelManager : MonoBehaviour
 
     public void toPasteState()
     {
-        this.InfoPanel.SetActive(false);
-        this.tileScrollView.SetActive(false);
-        this.buildingTileInfo.SetActive(false);
-        this.selectTileMapButtons.SetActive(false);
-        this.cursorSize.SetActive(false);
-        this.gameObjectScrollView.SetActive(false);
-        this.buildingGameObjectInfo.SetActive(false);
-        this.copyToCursorButton.SetActive(true);
+        this.resetUi();
+
         this.buildingState = BuildingState.Paste;
     }
 
@@ -659,5 +818,44 @@ public class CreateLevelManager : MonoBehaviour
     {
         string levelName = GameObject.Find("LoadButtonInputField").GetComponent<TMP_InputField>().text;
         GameObject.Find("LoadSaveLevelManager").GetComponent<SaveLoadLevel>().loadLevel(levelName);
+    }
+
+    public void OnClickSelectOptions()
+    {
+        if (this.selectOptions.activeSelf == true)
+        {
+            resetBasicUi();
+        }
+        else
+        {
+            resetBasicUi();
+            this.selectOptions.SetActive(true);
+        }
+    }
+
+    public void OnClickLevelOptions()
+    {
+        if (this.selectOptions.activeSelf == true)
+        {
+            resetBasicUi();
+        }
+        else
+        {
+            resetBasicUi();
+            this.levelOptions.SetActive(true);
+        }
+    }
+
+    public void OnClickBuildOptions()
+    {
+        if (this.selectOptions.activeSelf == true)
+        {
+            resetBasicUi();
+        }
+        else
+        {
+            resetBasicUi();
+            this.buildOptions.SetActive(true);
+        }
     }
 }
