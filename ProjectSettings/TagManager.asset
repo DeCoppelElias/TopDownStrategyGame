@@ -7,6 +7,7 @@ TagManager:
   - wall
   - castle
   - client
+  - decoration
   layers:
   - Default
   - TransparentFX

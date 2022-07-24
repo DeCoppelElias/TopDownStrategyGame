@@ -4740,8 +4740,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1113980833}
   - component: {fileID: 1113980836}
-  - component: {fileID: 1113980835}
   - component: {fileID: 1113980834}
+  - component: {fileID: 1113980835}
   m_Layer: 5
   m_Name: SaveButton
   m_TagString: Untagged

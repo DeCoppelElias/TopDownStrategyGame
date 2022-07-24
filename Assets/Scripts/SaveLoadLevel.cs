@@ -9,8 +9,16 @@ using UnityEngine.Tilemaps;
 
 public class SaveLoadLevel : MonoBehaviour
 {
-    public void saveLevel(string levelName)
+    private WaitForEndOfFrame frameEnd = new WaitForEndOfFrame();
+    public IEnumerator saveLevel(string levelName)
     {
+        // Wait till the last possible moment before screen rendering to hide the UI
+        yield return null;
+        GameObject.Find("Canvas").GetComponent<Canvas>().enabled = false;
+
+        // Wait for screen rendering to complete
+        yield return frameEnd;
+
         string levelString = "";
 
         // Castles
@@ -58,9 +66,39 @@ public class SaveLoadLevel : MonoBehaviour
                 levelString += tile.name + ":" + position + "/";
             }
         }
+        levelString += "\n\n";
+
+        // PNG image of level for level selection
+        levelString += "PNG: \n";
+        // Create a texture the size of the screen, RGB24 format
+        int width = Screen.width;
+        int height = Screen.height;
+
+        Debug.Log(width);
+        Debug.Log(height);
+
+        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+        // Read screen contents into the texture
+        tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+
+        GameObject.Find("Canvas").GetComponent<Canvas>().enabled = true;
+
+        // Encode texture into PNG
+        byte[] bytes = tex.EncodeToPNG();
+        Debug.Log(bytes.Length);
+        Destroy(tex);
+
+        levelString += "width: " + tex.width + "\n";
+        levelString += "height: " + tex.height + "\n";
+
+        foreach (byte b in bytes)
+        {
+            levelString += b + " ";
+        }
         levelString += "\n";
 
-        StreamWriter writer = new StreamWriter("D:/UnityProjects/TopDownStrategyGame/Assets/Levels/" + levelName + ".txt", false);
+        StreamWriter writer = new StreamWriter(Application.persistentDataPath + "/Levels/" + levelName + ".txt", false);
         writer.WriteLine(levelString);
         writer.Close();
     }
@@ -69,7 +107,7 @@ public class SaveLoadLevel : MonoBehaviour
     {
         try
         {
-            string[] lines = File.ReadAllLines("D:/UnityProjects/TopDownStrategyGame/Assets/Levels/" + levelName + ".txt");
+            string[] lines = File.ReadAllLines(Application.persistentDataPath + "/Levels/" + levelName + ".txt");
 
             // Castles
             GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");

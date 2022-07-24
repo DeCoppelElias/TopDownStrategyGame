@@ -18,9 +18,17 @@ public class MultiplayerSceneUi : NetworkBehaviour
         selectLevelUi.SetActive(false);
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
     }
-    public void selectLevel(int level)
+
+    public void selectLevel(string level)
     {
-        Level.level = level;
+        string s = level.Split('.')[0];
+        int levelNumber = int.Parse(s.Split('-')[1]);
+        Level.level = levelNumber;
+        networkManager.ServerChangeScene("Level");
+    }
+    public void selectLevel(int levelNumber)
+    {
+        Level.level = levelNumber;
         networkManager.ServerChangeScene("Level");
     }
 

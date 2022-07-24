@@ -26,6 +26,9 @@ public abstract class Troop : AttackingEntity
     [SyncVar(hook = nameof(onDetectRingChangeOpacity))]
     private float detectRingOpacity = 0;
 
+    [SyncVar(hook = nameof(onChangeVisibility))]
+    private bool visible = true;
+
     public override void Start()
     {
         base.Start();
@@ -59,6 +62,16 @@ public abstract class Troop : AttackingEntity
         if (_currentEntityState.Equals(EntityState.Attacking))
         {
             attackTarget();
+        }
+
+        // Check visibility
+        if (isVisible())
+        {
+            this.visible = true;
+        }
+        else
+        {
+            this.visible = false;
         }
     }
 
@@ -101,6 +114,19 @@ public abstract class Troop : AttackingEntity
             var step = _speed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(this.transform.position, _currentTarget.transform.position, step);
         }
+    }
+
+    private bool isVisible()
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 0.2f);
+        foreach (Collider2D hit in hits)
+        {
+            if (hit.transform.tag == "decoration")
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     /// <summary>
@@ -363,5 +389,17 @@ public abstract class Troop : AttackingEntity
     private void updateDetectRingScale()
     {
         this.ServerClient.updateDetectRingOfGameObject(this.gameObject, this.detectRingScale);
+    }
+
+    private void onChangeVisibility(bool oldVisibility, bool newVisibility)
+    {
+        GetComponent<SpriteRenderer>().enabled = newVisibility;
+        foreach (SpriteRenderer child in GetComponentsInChildren<SpriteRenderer>())
+        {
+            if(child != null)
+            {
+                child.enabled = newVisibility;
+            }
+        }
     }
 }
