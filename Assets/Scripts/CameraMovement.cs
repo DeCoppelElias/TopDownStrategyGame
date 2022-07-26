@@ -74,6 +74,11 @@ public class CameraMovement : MonoBehaviour
         cameraMax_y = topRight.y - vertExtent;
         cameraMin_x = bottomLeft.x + horzExtent;
         cameraMin_y = bottomLeft.y + vertExtent;
+
+        if(cameraMax_x <= cameraMin_x || cameraMax_y <= cameraMin_y)
+        {
+            bounded = false;
+        }
     }
 
     private void createMaxZoom()

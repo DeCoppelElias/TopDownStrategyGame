@@ -64,8 +64,14 @@ public class Level : NetworkBehaviour
         Vector2 decoBottomLeft = decorationTilemap.localBounds.center - decorationTilemap.localBounds.extents;
         Vector2 decoTopRight = decorationTilemap.localBounds.center + decorationTilemap.localBounds.extents;
 
-        bottomLeft = Vector2.Min(Vector2.Min(wallBottomLeft, floorBottomLeft), decoBottomLeft);
-        topRight = Vector2.Max(Vector2.Max(wallTopRight, floorTopRight), decoTopRight);
+        int minX = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.x, floorBottomLeft.x), decoBottomLeft.x));
+        int minY = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.y, floorBottomLeft.y), decoBottomLeft.y));
+
+        int maxX = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.x, floorTopRight.x), decoTopRight.x));
+        int maxY = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
+
+        bottomLeft = new Vector2(minX-1, minY-1);
+        topRight = new Vector2(maxX+1, maxY+1);
     }
 
     private void loadLevel()

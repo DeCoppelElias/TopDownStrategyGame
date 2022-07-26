@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c57bcfed340004947b34e2255268b897, type: 3}
+  m_Name: River Tile
+  m_EditorClassIdentifier: 
+  m_Sprite: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Transform:
+    e00: 1
+    e01: 0
+    e02: 0
+    e03: 0
+    e10: 0
+    e11: 1
+    e12: 0
+    e13: 0
+    e20: 0
+    e21: 0
+    e22: 1
+    e23: 0
+    e30: 0
+    e31: 0
+    e32: 0
+    e33: 1
+  m_InstancedGameObject: {fileID: 0}
+  m_Flags: 1
+  m_ColliderType: 1
+  m_Sprites:
+  - {fileID: 21300000, guid: a845022d4f4be7b4597bd394c78c8631, type: 3}
+  - {fileID: 21300000, guid: dad35686073f919439c4b5ccade39e97, type: 3}
+  - {fileID: 21300000, guid: 80fa83b5f9d41174cbbf9f917ca1bdf4, type: 3}
+  - {fileID: 21300000, guid: aab35b3c07a6fdd488d6ef6853b91528, type: 3}
+  - {fileID: 21300000, guid: cf0a2cbc031e075428ab370bb7c726ef, type: 3}
+  - {fileID: 21300000, guid: 6a61b16b636ffa44780d6ca0a24a17d5, type: 3}
+  - {fileID: 21300000, guid: 877287bc5925ed444a70bd42da49ffcc, type: 3}
+  - {fileID: 21300000, guid: dead9e017f29a9f478cc8a63434345e9, type: 3}
+  - {fileID: 21300000, guid: cd983ed52da15ee4ea5ba1d8722bd82a, type: 3}
+  - {fileID: 21300000, guid: 345bbe277d33aed49be3bc9bf10d8aaf, type: 3}
+  - {fileID: 21300000, guid: 7e76a79a5e7ce5948b2832fff85a6bdf, type: 3}
+  - {fileID: 21300000, guid: 16c64024587ddce428252a3e96db5737, type: 3}
+  - {fileID: 21300000, guid: bf1ec00df43c4d549ba20191ac3f434b, type: 3}
+  - {fileID: 21300000, guid: 73a86a71ead5d25429cf15fc8164889a, type: 3}
+  - {fileID: 21300000, guid: 0ae89ded9fd94f54eb2f6235bd44b095, type: 3}
+  - {fileID: 21300000, guid: df1370e397248db43a88cebd47d8618f, type: 3}

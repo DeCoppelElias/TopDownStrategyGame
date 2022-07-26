@@ -14,8 +14,7 @@ public class MultiplayerSceneUi : NetworkBehaviour
 
     private void Start()
     {
-        selectLevelUi = GameObject.Find("SelectLevelUi");
-        selectLevelUi.SetActive(false);
+        selectLevelUi = GameObject.Find("LevelScrollView");
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
     }
 

@@ -105,67 +105,66 @@ public class SaveLoadLevel : MonoBehaviour
 
     public void loadLevel(string levelName)
     {
+        string[] lines;
         try
         {
-            string[] lines = File.ReadAllLines(Application.persistentDataPath + "/Levels/" + levelName + ".txt");
-
-            // Castles
-            GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
-            GameObject castles = GameObject.Find("Castles");
-            deleteCastles();
-            foreach (string positionString in lines[1].Split('/'))
-            {
-                if (positionString == "") break;
-                string currentPositionString = positionString;
-
-                // Remove the parentheses
-                if (currentPositionString.StartsWith("(") && currentPositionString.EndsWith(")"))
-                {
-                    currentPositionString = currentPositionString.Substring(1, currentPositionString.Length - 2);
-                }
-
-                // split the items
-                string[] sArray = currentPositionString.Split(',');
-
-                // store as a Vector3
-                Vector3 castlePosition = new Vector3(
-                    float.Parse(sArray[0]),
-                    float.Parse(sArray[1]),
-                    float.Parse(sArray[2]));
-
-                GameObject castle = Instantiate(castlePrefab, castlePosition, Quaternion.identity, castles.transform);
-                NetworkServer.Spawn(castle);
-            }
-
-            // Ground Tilemap
-            Tilemap groundTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
-            groundTilemap.ClearAllTiles();
-            foreach (string tileString in lines[3].Split('/'))
-            {
-                spawnTile(tileString, groundTilemap);
-            }
-
-            // Wall Tilemap
-            Tilemap wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
-            wallTilemap.ClearAllTiles();
-            foreach (string tileString in lines[5].Split('/'))
-            {
-                spawnTile(tileString, wallTilemap);
-            }
-
-            // Decoration Tilemap
-            Tilemap decorationTileMap = GameObject.Find("Decoration").GetComponent<Tilemap>();
-            decorationTileMap.ClearAllTiles();
-            foreach (string tileString in lines[7].Split('/'))
-            {
-                spawnTile(tileString, decorationTileMap);
-            }
+            lines = File.ReadAllLines(Application.persistentDataPath + "/Levels/" + levelName + ".txt");
         }
-        catch (Exception e)
+        catch
         {
-            Debug.Log(e);
-            Debug.Log(e.StackTrace);
-            return;
+            lines = File.ReadAllLines(Application.dataPath + "/Levels/" + levelName + ".txt");
+        }
+
+        // Castles
+        GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
+        GameObject castles = GameObject.Find("Castles");
+        deleteCastles();
+        foreach (string positionString in lines[1].Split('/'))
+        {
+            if (positionString == "") break;
+            string currentPositionString = positionString;
+
+            // Remove the parentheses
+            if (currentPositionString.StartsWith("(") && currentPositionString.EndsWith(")"))
+            {
+                currentPositionString = currentPositionString.Substring(1, currentPositionString.Length - 2);
+            }
+
+            // split the items
+            string[] sArray = currentPositionString.Split(',');
+
+            // store as a Vector3
+            Vector3 castlePosition = new Vector3(
+                float.Parse(sArray[0]),
+                float.Parse(sArray[1]),
+                float.Parse(sArray[2]));
+
+            GameObject castle = Instantiate(castlePrefab, castlePosition, Quaternion.identity, castles.transform);
+            NetworkServer.Spawn(castle);
+        }
+
+        // Ground Tilemap
+        Tilemap groundTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
+        groundTilemap.ClearAllTiles();
+        foreach (string tileString in lines[3].Split('/'))
+        {
+            spawnTile(tileString, groundTilemap);
+        }
+
+        // Wall Tilemap
+        Tilemap wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
+        wallTilemap.ClearAllTiles();
+        foreach (string tileString in lines[5].Split('/'))
+        {
+            spawnTile(tileString, wallTilemap);
+        }
+
+        // Decoration Tilemap
+        Tilemap decorationTileMap = GameObject.Find("Decoration").GetComponent<Tilemap>();
+        decorationTileMap.ClearAllTiles();
+        foreach (string tileString in lines[7].Split('/'))
+        {
+            spawnTile(tileString, decorationTileMap);
         }
     }
 
