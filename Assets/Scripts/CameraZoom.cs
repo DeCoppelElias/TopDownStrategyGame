@@ -12,7 +12,9 @@ public class CameraZoom : MonoBehaviour
     [SerializeField]
     private float minZoom = 1;
     [SerializeField]
-    public float maxZoom = 40;
+    private float maxZoom = 40;
+
+
     void Update()
     {
         if (!EventSystem.current.IsPointerOverGameObject())
@@ -47,7 +49,15 @@ public class CameraZoom : MonoBehaviour
 
     public void setZoomSubtle(float zoom)
     {
+        targetZoom = zoom;
         Camera.main.orthographicSize = Mathf.Lerp(Camera.main.orthographicSize, zoom, Time.deltaTime * 5);
+        this.GetComponent<CameraMovement>().refreshCameraBounds();
+    }
+
+    public void setZoom(float zoom)
+    {
+        targetZoom = zoom;
+        Camera.main.orthographicSize = zoom;
         this.GetComponent<CameraMovement>().refreshCameraBounds();
     }
 }

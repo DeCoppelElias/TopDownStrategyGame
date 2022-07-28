@@ -75,7 +75,6 @@ public class CreateLevelButtons : MonoBehaviour
                     }
                     byte[] bytes = bytesList.ToArray();
 
-
                     // Load data into the texture and upload it to the GPU.
                     Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
                     tex.LoadImage(bytes);

@@ -30,19 +30,39 @@ public class PathFinding : MonoBehaviour
     [SerializeField]
     private Tile displaySearchedTile;
     [SerializeField]
+    private Tile displayErrorTile;
+    [SerializeField]
     private float debugUpdateSpeed = 1;
     private float lastUpdate = 0;
 
     private AVL avlTree = new AVL();
     private Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
+    private Dictionary<int,int> expandedNodes = new Dictionary<int,int>();
     private Node currentNode;
     private int counter = 0;
+
+    private void Start()
+    {
+        
+    }
+
+    private void test()
+    {
+        GameObject.Find("SaveLoadLevel").GetComponent<SaveLoadLevel>().loadLevel("Level-1");
+        this.debugStart = new Vector3Int(-52, 4, 0);
+        this.debugFinish = new Vector3Int(29, 7, 0);
+        this.debugState = DebugState.SelectingStart;
+    }
 
     private void Update()
     {
         if (debugState == DebugState.SelectingStart)
         {
-            if (Input.GetMouseButtonDown(0))
+            if (debugStart != new Vector3Int(0, 0, 0))
+            {
+                this.debugState = DebugState.SelectingFinish;
+            }
+            else if (Input.GetMouseButtonDown(0))
             {
                 this.debugStart = Vector3Int.FloorToInt(getMousePosition());
                 this.debugState = DebugState.SelectingFinish;
@@ -50,6 +70,12 @@ public class PathFinding : MonoBehaviour
         }
         else if (debugState == DebugState.SelectingFinish)
         {
+            if (debugFinish != new Vector3Int(0, 0, 0))
+            {
+                findPathDebug();
+                this.debugState = DebugState.Searching;
+                this.displayTilemap.ClearAllTiles();
+            }
             if (Input.GetMouseButtonDown(0))
             {
                 this.debugFinish = Vector3Int.FloorToInt(getMousePosition());
@@ -61,7 +87,10 @@ public class PathFinding : MonoBehaviour
         }
         else if (debugState == DebugState.Searching)
         {
+            float startTime = Time.time;
             debugUpdate();
+            float endTime = Time.time;
+            //Debug.Log(endTime - startTime);
 
             if (debugFinished)
             {
@@ -103,6 +132,7 @@ public class PathFinding : MonoBehaviour
         }
         int counter = 0;
         Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
+        Dictionary<int, int> expandedNodes = new Dictionary<int, int>();
         AVL avlTree = new AVL();
 
         Node firstNode = new Node(0, 0, start, null);
@@ -124,26 +154,32 @@ public class PathFinding : MonoBehaviour
                 float distanceToFinish = Vector3Int.Distance(neighborPosition, finish);
                 float distancePath = currentNode.distancePath + Vector3Int.Distance(currentNode.tilePosition, neighborPosition);
                 Node neighborNode = new Node(distancePath, distanceToFinish,  neighborPosition, currentNode);
+                int hashCode = neighborNode.GetHashCode();
 
-                if (storedNodes.ContainsKey(neighborNode.GetHashCode()))
+                if (!expandedNodes.ContainsKey(hashCode))
                 {
-                    Node node = storedNodes[neighborNode.GetHashCode()];
-                    if (distancePath < node.distancePath)
+                    if (storedNodes.ContainsKey(hashCode))
                     {
-                        avlTree.Delete(node);
-                        storedNodes.Remove(neighborNode.GetHashCode());
+                        Node node = storedNodes[hashCode];
+                        if (distancePath < node.distancePath)
+                        {
+                            avlTree.Delete(node);
+                            storedNodes.Remove(hashCode);
 
+                            avlTree.Add(neighborNode);
+                            storedNodes.Add(hashCode, neighborNode);
+                        }
+                    }
+                    else
+                    {
                         avlTree.Add(neighborNode);
                         storedNodes.Add(neighborNode.GetHashCode(), neighborNode);
                     }
                 }
-                else
-                {
-                    avlTree.Add(neighborNode);
-                    storedNodes.Add(neighborNode.GetHashCode(), neighborNode);
-                }
             }
             currentNode = avlTree.PopMinValue();
+            expandedNodes.Add(currentNode.GetHashCode(), 0);
+            storedNodes.Remove(currentNode.GetHashCode());
         }
 
         List<Vector2> path = new List<Vector2>();
@@ -193,6 +229,7 @@ public class PathFinding : MonoBehaviour
         {
             this.counter = 0;
             this.storedNodes = new Dictionary<int, Node>();
+            this.expandedNodes = new Dictionary<int, int>();
             this.avlTree = new AVL();
 
             Node firstNode = new Node(0, 0, debugStart, null);
@@ -208,6 +245,8 @@ public class PathFinding : MonoBehaviour
     {
         this.debugState = DebugState.Done;
         this.debugFinished = false;
+        this.debugStart = new Vector3Int(0, 0, 0);
+        this.debugFinish = new Vector3Int(0, 0, 0);
     }
 
     private void clearDisplay()
@@ -234,25 +273,30 @@ public class PathFinding : MonoBehaviour
                     Node neighborNode = new Node(distancePath, distanceToFinish, neighborPosition, currentNode);
                     int hashCode = neighborNode.GetHashCode();
 
-                    if (storedNodes.ContainsKey(hashCode))
+                    if (!expandedNodes.ContainsKey(hashCode))
                     {
-                        Node node = storedNodes[hashCode];
-                        if (distancePath < node.distancePath)
+                        if (storedNodes.ContainsKey(hashCode))
                         {
-                            avlTree.Delete(node);
-                            storedNodes.Remove(hashCode);
+                            Node node = storedNodes[hashCode];
+                            if (distancePath < node.distancePath)
+                            {
+                                avlTree.Delete(node);
+                                storedNodes.Remove(hashCode);
 
-                            avlTree.Add(neighborNode);
-                            storedNodes.Add(hashCode, neighborNode);
+                                avlTree.Add(neighborNode);
+                                storedNodes.Add(hashCode, neighborNode);
+                            }
                         }
-                    }
-                    else
-                    {
-                        avlTree.Add(neighborNode);
-                        storedNodes.Add(neighborNode.GetHashCode(), neighborNode);
+                        else
+                        {
+                            avlTree.Add(neighborNode);
+                            storedNodes.Add(neighborNode.GetHashCode(), neighborNode);
+                        }
                     }
                 }
                 currentNode = avlTree.PopMinValue();
+                expandedNodes.Add(currentNode.GetHashCode(),0);
+                storedNodes.Remove(currentNode.GetHashCode());
             }
             else if (counter < 10000)
             {
@@ -281,9 +325,12 @@ public class PathFinding : MonoBehaviour
         }
         catch(Exception exception)
         {
+            displayTilemap.SetTile(currentNode.tilePosition, displayErrorTile);
+
             Debug.Log("Counter: " + counter);
             Debug.Log(exception.Message);
             Debug.Log(exception.StackTrace);
+
             throw exception;
         }
     }

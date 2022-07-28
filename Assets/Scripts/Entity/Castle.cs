@@ -442,4 +442,22 @@ public class Castle : AttackingEntity
         }
         return result;
     }
+
+    protected override void toAttackingState()
+    {
+        this._currentEntityState = EntityState.Attacking;
+        this.attackRingOpacity = 1f;
+    }
+
+    protected override void toWalkingToTargetState()
+    {
+        this._currentEntityState = EntityState.WalkingToTarget;
+        this.attackRingOpacity = 0.2f;
+    }
+
+    protected override void toNormalState()
+    {
+        this._currentEntityState = EntityState.Normal;
+        this.attackRingOpacity = 0.2f;
+    }
 }

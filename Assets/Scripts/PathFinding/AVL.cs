@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
-public class AVL
+public class AVL : MonoBehaviour
 {
     public class Node
     {
@@ -101,6 +102,11 @@ public class AVL
     }
     private Node Delete(Node current, Node node, Node parent)
     {
+        if (node.tilePosition == new Vector3Int(-46, 7, 0))
+        {
+            UnityEngine.Debug.Log("");
+            List<List<Node>> treeInfo = getTreeInfo(root);
+        }
         if (current == null)
         { return null; }
         else
@@ -171,6 +177,10 @@ public class AVL
                 }
                 else
                 {
+                    UnityEngine.Debug.Log(node.tilePosition);
+                    //displayTree();
+                    //printAllHash();
+                    //checkIfSameHashcodeInTree(node);
                     throw new Exception("Node not in tree");
                 }
             }
@@ -209,6 +219,157 @@ public class AVL
         }
         return current;
     }
+    public bool contains(Vector3Int tilePosition)
+    {
+        return this.contains(this.root, tilePosition);
+    }
+    private bool contains(Node root, Vector3Int tilePosition)
+    {
+        if (root == null) return false;
+        if(root.tilePosition != tilePosition)
+        {
+            bool left = contains(root.left, tilePosition);
+            bool right = contains(root.right, tilePosition);
+            if(left || right)
+            {
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void checkIfSameHashcodeInTree(Node search)
+    {
+        List<List<Node>> treeInfo = getTreeInfo(root);
+
+        foreach (List<Node> nodes in treeInfo)
+        {
+            foreach (Node node in nodes)
+            {
+                if(node.GetHashCode() == search.GetHashCode())
+                {
+                    UnityEngine.Debug.Log("Node with same hascode found");
+                    UnityEngine.Debug.Log("Original node location: " + search.tilePosition);
+                    UnityEngine.Debug.Log("Original node hashcode: " + search.GetHashCode());
+                    UnityEngine.Debug.Log("Other node location: " + node.tilePosition);
+                    UnityEngine.Debug.Log("Other node hashcode: " + node.GetHashCode());
+                    return;
+                }
+            }
+        }
+    }
+    private void printAllHash()
+    {
+        List<List<Node>> treeInfo = getTreeInfo(root);
+
+        foreach (List<Node> nodes in treeInfo)
+        {
+            string result = "";
+            foreach (Node node in nodes)
+            {
+                result += node.GetHashCode();
+            }
+            UnityEngine.Debug.Log(result);
+        }
+    }
+
+    private void displayTree()
+    {
+        List<List<Node>> treeInfo = getTreeInfo(root);
+
+        foreach (List<Node> nodes in treeInfo)
+        {
+            string result = "";
+            foreach (Node node in nodes)
+            {
+                result += node.tilePosition.ToString();
+            }
+            UnityEngine.Debug.Log(result);
+        }
+    }
+
+    private List<List<Node>> getTreeInfo(Node root)
+    {
+        if(root.left == null && root.right == null)
+        {
+            List<Node> thisNode = new List<Node>();
+            thisNode.Add(root);
+
+            List<List<Node>> result = new List<List<Node>>();
+            result.Add(thisNode);
+
+            return result;
+        }
+        else if (root.left != null && root.right != null)
+        {
+            List<Node> thisNode = new List<Node>();
+            thisNode.Add(root);
+
+            List<List<Node>> childResultLeft = getTreeInfo(root.left);
+            List<List<Node>> childResultRight = getTreeInfo(root.right);
+
+            List<List<Node>> result = new List<List<Node>>();
+            result.Add(thisNode);
+            for (int i = 0; i < Math.Max(childResultLeft.Count, childResultRight.Count); i++)
+            {
+                List<Node> nodesLeft = new List<Node>();
+                if(i < childResultLeft.Count)
+                {
+                    nodesLeft = childResultLeft[i];
+                }
+
+                List<Node> nodesRight = new List<Node>();
+                if (i < childResultRight.Count)
+                {
+                    nodesRight = childResultRight[i];
+                }
+
+                List<Node> nodes = new List<Node>();
+                nodes.AddRange(nodesLeft);
+                nodes.AddRange(nodesRight);
+
+                result.Add(nodes);
+            }
+
+            return result;
+        }
+        else if (root.left != null)
+        {
+            List<Node> thisNode = new List<Node>();
+            thisNode.Add(root);
+
+            List<List<Node>> childResult = getTreeInfo(root.left);
+
+            List<List<Node>> result = new List<List<Node>>();
+            result.Add(thisNode);
+            result.AddRange(childResult);
+
+            return result;
+        }
+        else if (root.right != null)
+        {
+            List<Node> thisNode = new List<Node>();
+            thisNode.Add(root);
+
+            List<List<Node>> childResult = getTreeInfo(root.right);
+
+            List<List<Node>> result = new List<List<Node>>();
+            result.Add(thisNode);
+            foreach (List<Node> nodes in childResult)
+            {
+                result.Add(nodes);
+            }
+
+            return result;
+        }
+        else
+        {
+            UnityEngine.Debug.Log("error ocurred");
+            return new List<List<Node>>();
+        }
+    }
+
     private bool Contains(Node root, Node find)
     {
         if(root == find) return true;

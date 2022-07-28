@@ -68,19 +68,21 @@ public abstract class AttackingEntity : Entity
             _targetsToAttack.Add(entity);
             if (_currentTarget == entity)
             {
-                _currentEntityState = AttackingEntity.EntityState.Attacking;
-                this.attackRingOpacity = 1f;
+                toAttackingState();
                 //Debug.Log(this + " will now attack " + _currentTarget);
             }
             else if (_currentTarget == null)
             {
                 _currentTarget = entity;
-                _currentEntityState = AttackingEntity.EntityState.Attacking;
-                this.attackRingOpacity = 1f;
+                toAttackingState();
                 //Debug.Log(this + " will now attack " + _currentTarget);
             }
         }
     }
+
+    protected abstract void toAttackingState();
+    protected abstract void toWalkingToTargetState();
+    protected abstract void toNormalState();
 
     /// <summary>
     /// This method is called when a new collision exits the Attack Ring

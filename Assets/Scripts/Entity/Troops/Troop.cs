@@ -118,6 +118,9 @@ public abstract class Troop : AttackingEntity
 
     private bool isVisible()
     {
+        if (this.CurrentEntityState == EntityState.Attacking) return true;
+        if (this.Owner.isLocalPlayer) return true;
+
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 0.2f);
         foreach (Collider2D hit in hits)
         {
@@ -170,26 +173,29 @@ public abstract class Troop : AttackingEntity
         }
     }
 
-    private void toAttackingState()
+    protected override void toAttackingState()
     {
         _currentEntityState = AttackingEntity.EntityState.Attacking;
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 1f;
+        this.GetComponent<SpriteRenderer>().sortingLayerName = "Preview";
     }
 
-    private void toWalkingToTargetState()
+    protected override void toWalkingToTargetState()
     {
         _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 0.2f;
+        this.GetComponent<SpriteRenderer>().sortingLayerName = "Troop";
     }
 
-    private void toNormalState()
+    protected override void toNormalState()
     {
         _currentTarget = null;
         _currentEntityState = AttackingEntity.EntityState.Normal;
         this.detectRingOpacity = 0.2f;
         this.attackRingOpacity = 0.2f;
+        this.GetComponent<SpriteRenderer>().sortingLayerName = "Troop";
     }
     /// <summary>
     /// This method is called when an entity is killed. It does all the needed procedures before actually deleting the object
@@ -226,17 +232,17 @@ public abstract class Troop : AttackingEntity
         if (entity && _serverClient && entity.ServerClient && _owner != entity.Owner)
         {
             RaycastHit2D[] hits = Physics2D.LinecastAll(this.transform.position, entity.transform.position);
-            bool visible = true;
+            bool EnemyVisible = true;
             foreach(RaycastHit2D hit in hits)
             {
                 if(hit.transform.tag == "wall")
                 {
-                    visible = false;
+                    EnemyVisible = false;
                     break;
                 }
             }
 
-            if (visible)
+            if (EnemyVisible)
             {
                 //Debug.Log("adding to targets to follow: " + entity);
                 if (!this._targetsToFollow.Contains(entity))
@@ -400,6 +406,10 @@ public abstract class Troop : AttackingEntity
             {
                 child.enabled = newVisibility;
             }
+        }
+        if (!newVisibility)
+        {
+            this.GetComponent<SpriteRenderer>().sortingLayerName = "Troop";
         }
     }
 }

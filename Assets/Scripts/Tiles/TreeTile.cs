@@ -36,7 +36,7 @@ public class TreeTile : Tile
             m.SetTRS(Vector3.zero, Quaternion.Euler(0f, 0f, -90f * rotationIndex), Vector3.one);
             tileData.transform = m;
             tileData.flags = TileFlags.LockAll;
-            tileData.colliderType = ColliderType.None;
+            tileData.colliderType = ColliderType.Grid;
         }
         else
         {
