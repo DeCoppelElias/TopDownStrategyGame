@@ -27,7 +27,9 @@ public abstract class Troop : AttackingEntity
     private float detectRingOpacity = 0;
 
     [SyncVar(hook = nameof(onChangeVisibility))]
-    private bool visible = true;
+    private bool globalVisibility = true;
+
+    private DecorationCollisions decorationCollisions;
 
     public override void Start()
     {
@@ -44,6 +46,8 @@ public abstract class Troop : AttackingEntity
         Vector3 scale = new Vector3((viewRange * 2) + 1, (viewRange * 2) + 1, 0);
         this.detectRingOpacity = 0.2f;
         this.detectRingScale = scale;
+
+        decorationCollisions = GameObject.Find("Decoration").GetComponent<DecorationCollisions>();
     }
 
     /// <summary>
@@ -62,16 +66,6 @@ public abstract class Troop : AttackingEntity
         if (_currentEntityState.Equals(EntityState.Attacking))
         {
             attackTarget();
-        }
-
-        // Check visibility
-        if (isVisible())
-        {
-            this.visible = true;
-        }
-        else
-        {
-            this.visible = false;
         }
     }
 
@@ -114,22 +108,6 @@ public abstract class Troop : AttackingEntity
             var step = _speed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(this.transform.position, _currentTarget.transform.position, step);
         }
-    }
-
-    private bool isVisible()
-    {
-        if (this.CurrentEntityState == EntityState.Attacking) return true;
-        if (this.Owner.isLocalPlayer) return true;
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, 0.2f);
-        foreach (Collider2D hit in hits)
-        {
-            if (hit.transform.tag == "decoration")
-            {
-                return false;
-            }
-        }
-        return true;
     }
 
     /// <summary>
@@ -178,7 +156,7 @@ public abstract class Troop : AttackingEntity
         _currentEntityState = AttackingEntity.EntityState.Attacking;
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 1f;
-        this.GetComponent<SpriteRenderer>().sortingLayerName = "Preview";
+        this.globalVisibility = true;
     }
 
     protected override void toWalkingToTargetState()
@@ -186,7 +164,15 @@ public abstract class Troop : AttackingEntity
         _currentEntityState = AttackingEntity.EntityState.WalkingToTarget;
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 0.2f;
-        this.GetComponent<SpriteRenderer>().sortingLayerName = "Troop";
+
+        if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
+        {
+            this.globalVisibility = false;
+        }
+        else
+        {
+            this.globalVisibility = true;
+        }
     }
 
     protected override void toNormalState()
@@ -195,7 +181,14 @@ public abstract class Troop : AttackingEntity
         _currentEntityState = AttackingEntity.EntityState.Normal;
         this.detectRingOpacity = 0.2f;
         this.attackRingOpacity = 0.2f;
-        this.GetComponent<SpriteRenderer>().sortingLayerName = "Troop";
+        if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
+        {
+            this.globalVisibility = false;
+        }
+        else
+        {
+            this.globalVisibility = true;
+        }
     }
     /// <summary>
     /// This method is called when an entity is killed. It does all the needed procedures before actually deleting the object
@@ -248,6 +241,10 @@ public abstract class Troop : AttackingEntity
                 if (!this._targetsToFollow.Contains(entity))
                 {
                     this._targetsToFollow.Add(entity);
+                    if(this.Owner is Client owner && entity is Troop enemyTroop)
+                    {
+                        this.ServerClient.setTroopVisibility(enemyTroop, owner, true);
+                    }
                 }
                 if (_currentTarget == null)
                 {
@@ -282,6 +279,10 @@ public abstract class Troop : AttackingEntity
         {
             //Debug.Log("removing from targets to follow: " + entity);
             _targetsToFollow.Remove(entity);
+            if (this.Owner is Client owner && entity is Troop enemyTroop)
+            {
+                this.ServerClient.setTroopVisibility(enemyTroop, owner, false);
+            }
             if (_currentTarget == entity)
             {
                 searchNewTarget();
@@ -387,6 +388,31 @@ public abstract class Troop : AttackingEntity
         Invoke("updateDetectRingScale", 0.1f);
     }
 
+    public void onEnterDecoration()
+    {
+        if (!isServer) return;
+        this.globalVisibility = false;
+    }
+
+    public void onExitDecoration()
+    {
+        if (!isServer) return;
+        this.globalVisibility = true;
+    }
+
+    public void setVisibility(bool newVisibility)
+    {
+        if (this.Owner.isLocalPlayer) return;
+        GetComponent<SpriteRenderer>().enabled = newVisibility;
+        foreach (SpriteRenderer child in GetComponentsInChildren<SpriteRenderer>())
+        {
+            if (child != null)
+            {
+                child.enabled = newVisibility;
+            }
+        }
+    }
+
     private void updateDetectRingOpacity()
     {
         this.ServerClient.updateDetectRingOfGameObject(this.gameObject, this.detectRingOpacity);
@@ -399,17 +425,6 @@ public abstract class Troop : AttackingEntity
 
     private void onChangeVisibility(bool oldVisibility, bool newVisibility)
     {
-        GetComponent<SpriteRenderer>().enabled = newVisibility;
-        foreach (SpriteRenderer child in GetComponentsInChildren<SpriteRenderer>())
-        {
-            if(child != null)
-            {
-                child.enabled = newVisibility;
-            }
-        }
-        if (!newVisibility)
-        {
-            this.GetComponent<SpriteRenderer>().sortingLayerName = "Troop";
-        }
+        setVisibility(newVisibility);
     }
 }

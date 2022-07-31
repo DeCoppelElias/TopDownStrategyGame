@@ -12,6 +12,7 @@ public class HostConnect : NetworkBehaviour
     private void Awake()
     {
         networkManager = this.GetComponent<NetworkManager>();
+        ip_inputField = GameObject.Find("AdressInputField").GetComponent<TMP_InputField>();
     }
 
     public void host()

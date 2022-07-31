@@ -102,11 +102,6 @@ public class AVL : MonoBehaviour
     }
     private Node Delete(Node current, Node node, Node parent)
     {
-        if (node.tilePosition == new Vector3Int(-46, 7, 0))
-        {
-            UnityEngine.Debug.Log("");
-            List<List<Node>> treeInfo = getTreeInfo(root);
-        }
         if (current == null)
         { return null; }
         else

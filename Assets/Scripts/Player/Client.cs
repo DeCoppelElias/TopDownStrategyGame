@@ -28,16 +28,16 @@ public class Client : Player
 
         this.name = "LocalClient";
 
-        if (SceneManager.GetActiveScene().name == "MultiplayerScene")
+        if (SceneManager.GetActiveScene().name == "LevelSelectScene")
         {
-            MultiplayerSceneUi multiplayerSceneUi = GameObject.Find("Canvas").GetComponent<MultiplayerSceneUi>();
-            multiplayerSceneUi.setClient(this);
+            LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
+            levelSelectSceneSceneUi.setClient(this);
             if (isServer)
             {
-                multiplayerSceneUi.activateSelectLevelUi();
+                levelSelectSceneSceneUi.activateSelectLevelUi();
             }
         }
-        else if (SceneManager.GetActiveScene().name != "MultiplayerScene")
+        else if (SceneManager.GetActiveScene().name == "Level")
         {
             this.clientStateManager = new ClientStateManager(this);
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
@@ -62,7 +62,7 @@ public class Client : Player
     private void Update()
     {
         if (!isLocalPlayer) return;
-        if(SceneManager.GetActiveScene().name != "MultiplayerScene")
+        if(SceneManager.GetActiveScene().name == "Level")
         {
             if (this.levelSceneServer.getCurrentGameState() == "Normal")
             {
@@ -90,7 +90,7 @@ public class Client : Player
     public void leaveGame()
     {
         if (!isLocalPlayer) return;
-        if (SceneManager.GetActiveScene().name != "MultiplayerScene")
+        if (SceneManager.GetActiveScene().name == "Level")
         {
             this.changeGameState("Normal");
             this.onClientDisconnect(this.gameObject);
@@ -437,5 +437,12 @@ public class Client : Player
         Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
         NetworkManager networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
         networkManager.maxConnections = level.maxPlayers;
+    }
+
+    [Command]
+    public void setTroopVisibility(Troop troop, Client client, bool newVisibility)
+    {
+        if (troop == null || client == null) return;
+        this.levelSceneServer.setTroopVisibilityForClient(client.connectionToClient, troop.gameObject, newVisibility);
     }
 }

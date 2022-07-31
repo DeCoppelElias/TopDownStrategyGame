@@ -43,8 +43,6 @@ public class SaveLoadLevel : NetworkBehaviour
     private void Update()
     {
         StartCoroutine(saveLevelStep());
-
-
     }
 
     private IEnumerator saveLevelStep()

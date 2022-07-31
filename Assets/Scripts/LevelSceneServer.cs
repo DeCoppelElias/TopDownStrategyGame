@@ -77,6 +77,13 @@ public class LevelSceneServer : NetworkBehaviour
         GameObject.Find("Canvas").GetComponent<LevelSceneUi>().disableAllUi();
     }
 
+    [TargetRpc]
+    public void setTroopVisibilityForClient(NetworkConnection networkConnection, GameObject troopGameObject, bool newVisibility)
+    {
+        Troop troop = troopGameObject.GetComponent<Troop>();
+        troop.setVisibility(newVisibility);
+    }
+
     /// <summary>
     /// Will update the server
     /// </summary>

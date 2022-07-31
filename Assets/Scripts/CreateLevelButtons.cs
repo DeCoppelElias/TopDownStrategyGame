@@ -22,7 +22,7 @@ public class CreateLevelButtons : MonoBehaviour
             GameObject levelScrollView = GameObject.Find("LevelScrollView");
             GameObject content = levelScrollView.transform.Find("Viewport").Find("Content").gameObject;
 
-            MultiplayerSceneUi manager = GameObject.Find("Canvas").GetComponent<MultiplayerSceneUi>();
+            LevelSelectScene manager = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
 
             foreach (FileInfo file in fileInfo)
             {

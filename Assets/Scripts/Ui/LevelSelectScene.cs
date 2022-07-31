@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
 
-public class MultiplayerSceneUi : NetworkBehaviour
+public class LevelSelectScene : NetworkBehaviour
 {
     [SerializeField]
     private NetworkManager networkManager;
@@ -39,6 +39,10 @@ public class MultiplayerSceneUi : NetworkBehaviour
     public void leaveGame()
     {
         client.leaveGame();
+        if (client.isServer)
+        {
+
+        }
     }
 
     public void setClient(Client client)
