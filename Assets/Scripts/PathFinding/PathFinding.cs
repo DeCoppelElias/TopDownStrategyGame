@@ -262,7 +262,7 @@ public class PathFinding : MonoBehaviour
                 maxHeight -= widthDif / 5;
             }
 
-            Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesMiddle(1f, minWidth, maxWidth, minHeight, maxHeight, true);
+            Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesMiddle(1f, minWidth, maxWidth, minHeight, maxHeight);
 
             // Find path with added obstacles
             List<Vector2> path = findShortestPath(start, finish, virtualObstacles);
@@ -393,8 +393,6 @@ public class PathFinding : MonoBehaviour
         }
         return (new Vector2(minX, minY), new Vector2(maxX, maxY));
     }
-
-
 
     public List<Vector2> findPathRandomGreedy(Vector3 s, Vector3 f, Dictionary<Vector3Int, string> virtualObstacles, int maxCounter)
     {

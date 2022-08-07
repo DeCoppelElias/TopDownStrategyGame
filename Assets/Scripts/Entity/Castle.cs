@@ -240,7 +240,7 @@ public class Castle : AttackingEntity
 
             tries++;
         }
-        if(tries < maxTries && foundAtLeastOne)
+        if(foundAtLeastOne)
         {
             return bestPosition;
         }

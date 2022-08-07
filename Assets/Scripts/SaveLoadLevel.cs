@@ -147,9 +147,10 @@ public class SaveLoadLevel : NetworkBehaviour
 
                 float newOrthographicSizeNormalScreen = (topRight.y - bottomLeft.y) / 2;
                 float newOrthographicSizeAdjusted = newOrthographicSizeNormalScreen * (Screen.height / height);
-                CameraZoom cameraZoom = Camera.main.GetComponent<CameraZoom>();
-                cameraZoom.setMaxZoom(newOrthographicSizeAdjusted);
-                cameraZoom.setZoom(newOrthographicSizeAdjusted);
+                CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
+                cameraMovement.ZoomableCamera = false;
+                cameraMovement.MovableCamera = false;
+                cameraMovement.setZoom(newOrthographicSizeAdjusted);
 
                 float vertExtent = Camera.main.orthographicSize;
                 float horzExtent = vertExtent * Screen.width / Screen.height;
@@ -170,7 +171,7 @@ public class SaveLoadLevel : NetworkBehaviour
                 tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
 
                 Camera.main.transform.position = oldPosition;
-                Camera.main.GetComponent<CameraZoom>().setMaxZoom(oldOrthographicSize);
+                Camera.main.GetComponent<CameraMovement>().setMaxZoom(oldOrthographicSize);
 
                 // Encode texture into PNG
                 byte[] bytes = tex.EncodeToPNG();
@@ -187,6 +188,10 @@ public class SaveLoadLevel : NetworkBehaviour
 
                 writer.WriteLine(levelString);
                 writer.Close();
+
+                CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
+                cameraMovement.ZoomableCamera = true;
+                cameraMovement.MovableCamera = true;
 
                 canvas.enabled = true;
                 Debug.Log("Level is fully saved");
@@ -266,74 +271,56 @@ public class SaveLoadLevel : NetworkBehaviour
         {
             spawnTile(tileString, decorationTileMap);
         }
+
+        // Building a wall around the map
+        Tile wallTile = getTile("WallTile");
+        buildLevelEdgeWall(wallTile);
     }
 
     public void loadLevel()
     {
-        string[] lines;
-
         string levelName = inputField.text;
+        loadLevel(levelName);
+    }
 
-        try
+    private void buildLevelEdgeWall(Tile wallTile)
+    {
+        (Vector2, Vector2) tuple = findBorders();
+        Vector2 bottomLeft = tuple.Item1;
+        Vector2 topRight = tuple.Item2;
+
+        for (int x = (int)bottomLeft.x; x <= topRight.x; x++)
         {
-            lines = File.ReadAllLines(Application.persistentDataPath + "/Levels/" + levelName + ".txt");
+            wallTilemap.SetTile(new Vector3Int(x, (int)bottomLeft.y, 0), wallTile);
+            wallTilemap.SetTile(new Vector3Int(x, (int)topRight.y, 0), wallTile);
         }
-        catch
+        for (int y = (int)bottomLeft.y; y <= topRight.y; y++)
         {
-            lines = File.ReadAllLines(Application.dataPath + "/Levels/" + levelName + ".txt");
+            wallTilemap.SetTile(new Vector3Int((int)bottomLeft.x, y, 0), wallTile);
+            wallTilemap.SetTile(new Vector3Int((int)topRight.x, y, 0), wallTile);
         }
+    }
+    private (Vector2,Vector2) findBorders()
+    {
+        Vector2 wallBottomLeft = wallTilemap.localBounds.center - wallTilemap.localBounds.extents;
+        Vector2 wallTopRight = wallTilemap.localBounds.center + wallTilemap.localBounds.extents;
 
-        // Castles
-        GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
-        GameObject castles = GameObject.Find("Castles");
-        deleteCastles();
-        foreach (string positionString in lines[1].Split('/'))
-        {
-            if (positionString == "") break;
-            string currentPositionString = positionString;
+        Vector2 floorBottomLeft = floorTilemap.localBounds.center - floorTilemap.localBounds.extents;
+        Vector2 floorTopRight = floorTilemap.localBounds.center + floorTilemap.localBounds.extents;
 
-            // Remove the parentheses
-            if (currentPositionString.StartsWith("(") && currentPositionString.EndsWith(")"))
-            {
-                currentPositionString = currentPositionString.Substring(1, currentPositionString.Length - 2);
-            }
+        Vector2 decoBottomLeft = decorationTilemap.localBounds.center - decorationTilemap.localBounds.extents;
+        Vector2 decoTopRight = decorationTilemap.localBounds.center + decorationTilemap.localBounds.extents;
 
-            // split the items
-            string[] sArray = currentPositionString.Split(',');
+        int minX = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.x, floorBottomLeft.x), decoBottomLeft.x));
+        int minY = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.y, floorBottomLeft.y), decoBottomLeft.y));
 
-            // store as a Vector3
-            Vector3 castlePosition = new Vector3(
-                float.Parse(sArray[0]),
-                float.Parse(sArray[1]),
-                float.Parse(sArray[2]));
+        int maxX = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.x, floorTopRight.x), decoTopRight.x));
+        int maxY = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
 
-            GameObject castle = Instantiate(castlePrefab, castlePosition, Quaternion.identity, castles.transform);
-            NetworkServer.Spawn(castle);
-        }
+        Vector2 bottomLeft = new Vector2(minX - 1, minY - 1);
+        Vector2 topRight = new Vector2(maxX, maxY);
 
-        // Ground Tilemap
-        Tilemap groundTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
-        groundTilemap.ClearAllTiles();
-        foreach (string tileString in lines[3].Split('/'))
-        {
-            spawnTile(tileString, groundTilemap);
-        }
-
-        // Wall Tilemap
-        Tilemap wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
-        wallTilemap.ClearAllTiles();
-        foreach (string tileString in lines[5].Split('/'))
-        {
-            spawnTile(tileString, wallTilemap);
-        }
-
-        // Decoration Tilemap
-        Tilemap decorationTileMap = GameObject.Find("Decoration").GetComponent<Tilemap>();
-        decorationTileMap.ClearAllTiles();
-        foreach (string tileString in lines[7].Split('/'))
-        {
-            spawnTile(tileString, decorationTileMap);
-        }
+        return (bottomLeft, topRight);
     }
 
     private void spawnTile(string tileString, Tilemap tilemap)
@@ -362,6 +349,11 @@ public class SaveLoadLevel : NetworkBehaviour
         tilemap.SetTile(tilePosition, tile);
     }
 
+    private Tile getTile(string tileName)
+    {
+        return (Tile)Resources.Load("Tiles/BuildableTiles/" + tileName);
+    }
+
     private void deleteCastles()
     {
         GameObject castles = GameObject.Find("Castles");
@@ -369,28 +361,5 @@ public class SaveLoadLevel : NetworkBehaviour
         {
             NetworkServer.Destroy(castle.gameObject);
         }
-    }
-
-    private (Vector2,Vector2) findBorders()
-    {
-        Vector2 wallBottomLeft = wallTilemap.localBounds.center - wallTilemap.localBounds.extents;
-        Vector2 wallTopRight = wallTilemap.localBounds.center + wallTilemap.localBounds.extents;
-
-        Vector2 floorBottomLeft = floorTilemap.localBounds.center - floorTilemap.localBounds.extents;
-        Vector2 floorTopRight = floorTilemap.localBounds.center + floorTilemap.localBounds.extents;
-
-        Vector2 decoBottomLeft = decorationTilemap.localBounds.center - decorationTilemap.localBounds.extents;
-        Vector2 decoTopRight = decorationTilemap.localBounds.center + decorationTilemap.localBounds.extents;
-
-        int minX = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.x, floorBottomLeft.x), decoBottomLeft.x));
-        int minY = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.y, floorBottomLeft.y), decoBottomLeft.y));
-
-        int maxX = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.x, floorTopRight.x), decoTopRight.x));
-        int maxY = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
-
-        Vector2 bottomLeft = new Vector2(minX - 1, minY - 1);
-        Vector2 topRight = new Vector2(maxX + 1, maxY + 1);
-
-        return (bottomLeft, topRight);
     }
 }

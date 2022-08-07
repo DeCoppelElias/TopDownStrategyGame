@@ -2554,7 +2554,7 @@ TilemapRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: -1417367325
-  m_SortingLayer: 3
+  m_SortingLayer: 2
   m_SortingOrder: 0
   m_ChunkSize: {x: 32, y: 32, z: 32}
   m_ChunkCullingBounds: {x: 0, y: 0, z: 0}
@@ -3235,15 +3235,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c23e5750fb30a0c4fafd646f9da78739, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _boundedCamera: 1
+  _movableCamera: 1
+  _zoomableCamera: 1
+  zoomSpeed: 5
+  minZoom: 1
+  maxZoom: 40
   moveSpeed: 20
-  cameraMax_x: 0
-  cameraMax_y: 0
-  cameraMin_x: 0
-  cameraMin_y: 0
-  bounded: 0
-  bottomLeft: {x: 0, y: 0}
-  topRight: {x: 0, y: 0}
-  cameraMovement: 1
 --- !u!114 &705780170
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4618,7 +4616,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee8fa4c759f0fd64487ede34f942ef61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  image: {fileID: 0}
+  syncMode: 0
+  syncInterval: 0.1
+  inputField: {fileID: 0}
 --- !u!4 &987890121
 Transform:
   m_ObjectHideFlags: 0
