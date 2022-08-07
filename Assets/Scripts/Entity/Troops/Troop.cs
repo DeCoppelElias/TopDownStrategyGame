@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
+using UnityEngine.SceneManagement;
+
 public abstract class Troop : AttackingEntity
 {
     [SerializeField][SyncVar]
@@ -71,6 +73,7 @@ public abstract class Troop : AttackingEntity
 
     private void normalState()
     {
+        if (this == null) return;
         if (_path.Count > 0)
         {
             Vector2 currentPosition = transform.position;
@@ -97,7 +100,7 @@ public abstract class Troop : AttackingEntity
             }
             if (closestCastle == null) { return; }
             PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            _path = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(closestCastle.transform.position));
+            _path = pathFinding.findShortestPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(closestCastle.transform.position));
         }
     }
 
@@ -133,7 +136,7 @@ public abstract class Troop : AttackingEntity
             _currentTarget = null;
 
             PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector2> newPath = pathFinding.findPath(this.transform.position, _path[0]);
+            List<Vector2> newPath = pathFinding.findShortestPath(this.transform.position, _path[0]);
             newPath.AddRange(_path);
             _path = newPath;
 
@@ -339,7 +342,21 @@ public abstract class Troop : AttackingEntity
     /// </summary>
     private void createPathLine()
     {
-        if (this.Owner.isLocalPlayer)
+        if (SceneManager.GetActiveScene().name == "Level")
+        {
+            if (this.Owner.isLocalPlayer)
+            {
+                lineRenderer.positionCount = 0;
+                lineRenderer.gameObject.SetActive(true);
+                foreach (Vector2 position in this._path)
+                {
+                    lineRenderer.positionCount += 1;
+                    lineRenderer.SetPosition(lineRenderer.positionCount - 1, position);
+                }
+                lineRenderer.gameObject.GetComponent<LineRendererController>().decayOverTime(3);
+            }
+        }
+        else if (SceneManager.GetActiveScene().name == "MainMenu")
         {
             lineRenderer.positionCount = 0;
             lineRenderer.gameObject.SetActive(true);
@@ -354,12 +371,19 @@ public abstract class Troop : AttackingEntity
 
     public override void detectClick()
     {
-        Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
-        if(localClient.getClientState() == "ViewingState")
+        if (SceneManager.GetActiveScene().name == "Level")
+        {
+            Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
+            if (localClient.getClientState() == "ViewingState")
+            {
+                createPathLine();
+                Dictionary<string, object> info = getEntityInfo();
+                localClient.displayInfo(info);
+            }
+        }
+        else if (SceneManager.GetActiveScene().name == "MainMenu")
         {
             createPathLine();
-            Dictionary<string, object> info = getEntityInfo();
-            localClient.displayInfo(info);
         }
     }
 

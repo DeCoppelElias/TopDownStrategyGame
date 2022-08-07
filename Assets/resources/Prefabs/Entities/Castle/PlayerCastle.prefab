@@ -126,7 +126,7 @@ MonoBehaviour:
   _maxGold: 10
   buildRange: 20
   _goldGain: 1
-  _goldCooldown: 3
+  _goldCooldown: 5
   _lastgoldGain: 0
 --- !u!114 &202833368633789879
 MonoBehaviour:

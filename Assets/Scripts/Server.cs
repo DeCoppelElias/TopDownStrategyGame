@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
+using UnityEngine.SceneManagement;
 
-public class LevelSceneServer : NetworkBehaviour
+public class Server : NetworkBehaviour
 {
     private enum GameState { Pause, Normal, Loading };
     [SyncVar]
@@ -25,30 +26,37 @@ public class LevelSceneServer : NetworkBehaviour
     {
         if (!isServer) return;
 
-        if(this._currentGameState == GameState.Loading)
+        if(SceneManager.GetActiveScene().name == "Level")
         {
-            GameObject clients = GameObject.Find("Clients");
-            if(this.clients.Count == clients.transform.childCount)
+            if (this._currentGameState == GameState.Loading)
             {
-                this.setupCastles();
-                this._currentGameState = GameState.Normal;
+                GameObject clients = GameObject.Find("Clients");
+                if (this.clients.Count == clients.transform.childCount)
+                {
+                    this.setupCastles();
+                    this._currentGameState = GameState.Normal;
+                }
+            }
+
+            if (this._currentGameState == GameState.Normal)
+            {
+                // Updating Ai
+                foreach (AiClient aiClient in GameObject.Find("AiClients").transform.GetComponentsInChildren<AiClient>())
+                {
+                    aiClient.aiUpdate();
+                }
+
+                // Updating castles
+                foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
+                {
+                    Castle currentCastle = castleGameObject.GetComponent<Castle>();
+                    currentCastle.updateCastle();
+                }
             }
         }
-
-        if(this._currentGameState == GameState.Normal)
+        else if(SceneManager.GetActiveScene().name == "MainMenu")
         {
-            // Updating Ai
-            foreach (AiClient aiClient in GameObject.Find("AiClients").transform.GetComponentsInChildren<AiClient>())
-            {
-                aiClient.aiUpdate();
-            }
 
-            // Updating castles
-            foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))
-            {
-                Castle currentCastle = castleGameObject.GetComponent<Castle>();
-                currentCastle.updateCastle();
-            }
         }
     }
     public string getCurrentGameState()

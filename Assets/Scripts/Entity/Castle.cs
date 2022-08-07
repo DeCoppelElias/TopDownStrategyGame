@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
+using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 public class Castle : AttackingEntity
 {
@@ -37,10 +39,14 @@ public class Castle : AttackingEntity
     [SerializeField]
     private float _lastgoldGain = 0;
 
+    private Tilemap obstacleTilemap;
+
     public override void Start()
     {
         base.Start();
         _lastgoldGain = Time.time;
+
+        obstacleTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
     }
 
     public Dictionary<string, object> getTowerInfo(string type)
@@ -122,6 +128,14 @@ public class Castle : AttackingEntity
             return;
         }
 
+        Vector3Int flooredSpawnPosition = Vector3Int.FloorToInt(spawnPosition);
+        if(obstacleTilemap.GetTile(flooredSpawnPosition) != null)
+        {
+            Debug.Log("Cannot place building in a wall");
+            DebugPanel.displayDebugMessage("Cannot place building in a wall");
+            return;
+        }
+
         int cost = 0;
         GameObject prefab = null;
         if (towerName == "ArcherTower")
@@ -152,6 +166,87 @@ public class Castle : AttackingEntity
         {
             Debug.Log("Not enough gold, this tower costs: " + cost);
             DebugPanel.displayDebugMessage("Not enough gold, this tower costs: " + cost);
+        }
+    }
+
+    public bool maximumAmountOfTowers()
+    {
+        return _towers.Count == maxTowers;
+    }
+
+    public bool validTowerPosition(Vector3 spawnPosition)
+    {
+        // Check if not too far
+        if (Vector2.Distance(this.transform.position, spawnPosition) > buildRange) return false;
+
+        // Check if not too close to castle
+        float distanceToCastle = Vector2.Distance(spawnPosition, this.transform.position);
+        float castleSpriteSize = this.transform.Find("AttackRing").GetComponent<SpriteRenderer>().bounds.size.x;
+        if (distanceToCastle < castleSpriteSize / 2)
+        {
+            return false;
+        }
+
+        // Check if not too close to other towers
+        foreach (Tower tower in _towers)
+        {
+            float distance = Vector2.Distance(spawnPosition, tower.transform.position);
+            float spriteSize = tower.transform.Find("AttackRing").GetComponent<SpriteRenderer>().bounds.size.x;
+            if (distance <= spriteSize / 2)
+            {
+                return false;
+            }
+        }
+
+        // Check if not inside obstacle
+        Vector3Int flooredSpawnPosition = Vector3Int.FloorToInt(spawnPosition);
+        if (obstacleTilemap.GetTile(flooredSpawnPosition) != null)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public Vector3 generateRandomTowerPosition(Vector3 enemyPosition)
+    {
+        bool foundAtLeastOne = false;
+        float distance = float.MaxValue;
+
+        Vector3 bestPosition = this.transform.position;
+        float bestDistance = distance;
+
+        int counter = 0;
+        int maxCounter = 50;
+        int tries = 0;
+        int maxTries = 100;
+        while (tries < maxTries && counter < maxCounter)
+        {
+            float randomX = Random.Range(this.transform.position.x - buildRange, this.transform.position.x + buildRange);
+            float randomY = Random.Range(this.transform.position.y - buildRange, this.transform.position.y + buildRange);
+
+            Vector3 randomPosition = new Vector3(randomX, randomY, 0);
+            float randomPositionDistance = Vector3.Distance(randomPosition, enemyPosition) + Vector3.Distance(randomPosition, this.transform.position);
+
+            if(validTowerPosition(randomPosition) && randomPositionDistance < distance)
+            {
+                if(randomPositionDistance < bestDistance || !foundAtLeastOne)
+                {
+                    bestPosition = randomPosition;
+                    bestDistance = randomPositionDistance;
+                    foundAtLeastOne = true;
+                }
+                counter++;
+            }
+
+            tries++;
+        }
+        if(tries < maxTries && foundAtLeastOne)
+        {
+            return bestPosition;
+        }
+        else
+        {
+            throw new System.Exception("No random tower position was found after 100 tries");
         }
     }
 
@@ -220,23 +315,31 @@ public class Castle : AttackingEntity
     [Client]
     public void createTroop(string troop, Entity target)
     {
+        if (this == null || target == null) return;
         if (target is Castle castle)
         {
             PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector2> path = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(castle.transform.position));
+            List<Vector2> path = pathFinding.findShortestPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(castle.transform.position));
             createTroop(troop, path);
         }
         if (target is Troop enemy)
         {
             PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector2> pathToEnemy = pathFinding.findPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(enemy.transform.position));
-            List<Vector2> pathFromEnemyToCastle = pathFinding.findPath(Vector3Int.FloorToInt(enemy.transform.position), Vector3Int.FloorToInt(enemy.Owner.castle.transform.position));
+            List<Vector2> pathToEnemy = pathFinding.findShortestPath(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(enemy.transform.position));
+            List<Vector2> pathFromEnemyToCastle = pathFinding.findShortestPath(Vector3Int.FloorToInt(enemy.transform.position), Vector3Int.FloorToInt(enemy.Owner.castle.transform.position));
 
             List<Vector2> path = pathToEnemy;
             path.AddRange(pathFromEnemyToCastle);
 
             createTroop(troop, path);
         }
+    }
+
+    public void createTroopWithPathVariation(string Troop, Castle castle)
+    {
+        PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
+        List<Vector2> path = pathFinding.findPathVirtualObstacles(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(castle.transform.position));
+        createTroop(Troop, path);
     }
 
     /// <summary>
@@ -420,12 +523,16 @@ public class Castle : AttackingEntity
 
     public override void detectClick()
     {
-        Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
-        if (localClient.getClientState() == "ViewingState")
+        if (SceneManager.GetActiveScene().name == "Level")
         {
-            Dictionary<string, object> info = getEntityInfo();
-            localClient.displayInfo(info);
+            Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
+            if (localClient.getClientState() == "ViewingState")
+            {
+                Dictionary<string, object> info = getEntityInfo();
+                localClient.displayInfo(info);
+            }
         }
+        
     }
 
     public override Dictionary<string, object> getEntityInfo()

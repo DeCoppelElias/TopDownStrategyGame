@@ -2883,9 +2883,9 @@ MonoBehaviour:
   debugFinish: {x: 0, y: 0, z: 0}
   obstacleTilemap: {fileID: 207636950}
   displayTilemap: {fileID: 1915468051}
-  displayPathTile: {fileID: 0}
-  displaySearchedTile: {fileID: 0}
-  displayErrorTile: {fileID: 0}
+  displayPathTile: {fileID: 11400000, guid: 41d77c32155837443b56a492b4e2a3f2, type: 2}
+  displaySearchedTile: {fileID: 11400000, guid: de1035143fd12f847aadd8e8a9473e2e, type: 2}
+  displayErrorTile: {fileID: 11400000, guid: 4d222c7edb4d14b45a6ee7c2d3c0915d, type: 2}
   debugUpdateSpeed: 0.005
 --- !u!4 &788526315
 Transform:
@@ -6922,9 +6922,9 @@ TilemapRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 548644899
-  m_SortingLayer: 1
-  m_SortingOrder: 1
+  m_SortingLayerID: -581057983
+  m_SortingLayer: 6
+  m_SortingOrder: 0
   m_ChunkSize: {x: 32, y: 32, z: 32}
   m_ChunkCullingBounds: {x: 0, y: 0, z: 0}
   m_MaxChunkCount: 16

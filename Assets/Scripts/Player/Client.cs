@@ -15,7 +15,7 @@ public class Client : Player
     private string selectedTower;
     private LevelSceneUi uiManager;
 
-    private LevelSceneServer levelSceneServer;
+    private Server levelSceneServer;
 
     public override void OnStartClient()
     {
@@ -37,11 +37,12 @@ public class Client : Player
                 levelSelectSceneSceneUi.activateSelectLevelUi();
             }
         }
+        
         else if (SceneManager.GetActiveScene().name == "Level")
         {
             this.clientStateManager = new ClientStateManager(this);
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
-            this.levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+            this.levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
             this.uiManager.setupLevelSceneUi(this);
 
             initLevel();
@@ -57,6 +58,10 @@ public class Client : Player
             Invoke("findCastleForClient", 0.5f);
 
             Invoke("registerClient", 1f);
+        }
+        else if (SceneManager.GetActiveScene().name == "MainMenu")
+        {
+            this.levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
         }
     }
     private void Update()
@@ -107,7 +112,7 @@ public class Client : Player
         if (isServer)
         {
             Debug.Log("Stop host");
-            NetworkManager.singleton.StopHost();
+            NetworkManager.singleton.ServerChangeScene("LevelSelectScene");
         }
         else
         {
@@ -401,7 +406,7 @@ public class Client : Player
     [Command]
     public void onClientDisconnect(GameObject clientGameObject)
     {
-        LevelSceneServer levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+        Server levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
         levelSceneServer.onClientDisconnect(clientGameObject);
     }
 
@@ -413,7 +418,7 @@ public class Client : Player
     public void changeGameState(string gameState)
     {
         //Debug.Log("Updating gamestate from " + this.gameState.ToString() + " to " + gameState);
-        LevelSceneServer levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+        Server levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
         levelSceneServer.updateGameStateOnServer(gameState);
     }
 
@@ -424,7 +429,7 @@ public class Client : Player
     [Command]
     public void findCastleForClient(GameObject clientGameObject)
     {
-        LevelSceneServer levelSceneServer = GameObject.Find("Server").GetComponent<LevelSceneServer>();
+        Server levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
         levelSceneServer.findCastleForClient(clientGameObject);
     }
 

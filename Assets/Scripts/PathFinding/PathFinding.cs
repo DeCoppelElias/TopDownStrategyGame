@@ -43,15 +43,12 @@ public class PathFinding : MonoBehaviour
 
     private void Start()
     {
-        
+        Invoke("test", 1);
     }
 
     private void test()
     {
-        GameObject.Find("SaveLoadLevel").GetComponent<SaveLoadLevel>().loadLevel("Level-1");
-        this.debugStart = new Vector3Int(-52, 4, 0);
-        this.debugFinish = new Vector3Int(29, 7, 0);
-        this.debugState = DebugState.SelectingStart;
+        //generateVirtualObstaclesMiddle(1, 0, 60, 0, 60, true);
     }
 
     private void Update()
@@ -124,43 +121,49 @@ public class PathFinding : MonoBehaviour
     /// <param name="start"></param>
     /// <param name="finish"></param>
     /// <returns></returns>
-    public List<Vector2> findPath(Vector3Int start, Vector3Int finish)
+    public List<Vector2> findShortestPath(Vector3Int start, Vector3Int finish, Dictionary<Vector3Int, string> virtualObstacles = null, int maxCounter = 10000)
     {
-        if (display)
-        {
-            displayTilemap.ClearAllTiles();
-        }
+        // Reset previous display
+        if (display) displayTilemap.ClearAllTiles();
+
+        // Counter against infinite loop
         int counter = 0;
+
+        // Storing all expandable nodes with hashcode
         Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
+        // Storing all expanded nodes so they don't get added again
         Dictionary<int, int> expandedNodes = new Dictionary<int, int>();
+        // Balanced tree for finding best node to expand
         AVL avlTree = new AVL();
 
+        // Start expanding with start node
         Node firstNode = new Node(0, 0, start, null);
         avlTree.Add(firstNode);
-        storedNodes.Add(firstNode.GetHashCode(),firstNode);
+        storedNodes.Add(firstNode.GetHashCode(), firstNode);
 
         Node currentNode = avlTree.PopMinValue();
-        while(currentNode.tilePosition != finish && counter < 10000)
+        while (currentNode.tilePosition != finish && counter < maxCounter)
         {
-            if (display)
-            {
-                displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
-            }
+            // Display current node
+            if (display) displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
 
-            counter++;
-            List<Vector3Int> neighbors = getNeighbors(currentNode.tilePosition);
+            // Calculate neighbors
+            List<Vector3Int> neighbors = getNeighbors(currentNode.tilePosition, virtualObstacles);
             foreach (Vector3Int neighborPosition in neighbors)
             {
                 float distanceToFinish = Vector3Int.Distance(neighborPosition, finish);
                 float distancePath = currentNode.distancePath + Vector3Int.Distance(currentNode.tilePosition, neighborPosition);
-                Node neighborNode = new Node(distancePath, distanceToFinish,  neighborPosition, currentNode);
+                Node neighborNode = new Node(distancePath, distanceToFinish, neighborPosition, currentNode);
                 int hashCode = neighborNode.GetHashCode();
 
+                // Check if neighbor has already been expanded
                 if (!expandedNodes.ContainsKey(hashCode))
                 {
+                    // Check if neighbor already has been discovered
                     if (storedNodes.ContainsKey(hashCode))
                     {
                         Node node = storedNodes[hashCode];
+                        // if this node has a shorter path than previous discovery => replace it
                         if (distancePath < node.distancePath)
                         {
                             avlTree.Delete(node);
@@ -177,35 +180,292 @@ public class PathFinding : MonoBehaviour
                     }
                 }
             }
+            // Get next node depending on: distance from start + distance to finish
             currentNode = avlTree.PopMinValue();
             expandedNodes.Add(currentNode.GetHashCode(), 0);
             storedNodes.Remove(currentNode.GetHashCode());
-        }
 
-        List<Vector2> path = new List<Vector2>();
-        while (currentNode.previousNode != null)
+            counter++;
+        }
+        if (counter < maxCounter)
         {
-            Vector2 currentPosition = (Vector3)currentNode.tilePosition;
-            path.Add(currentPosition + new Vector2(0.5f,0.5f));
-            if (display)
+            // Path was found
+            List<Vector2> path = new List<Vector2>();
+            while (currentNode.previousNode != null)
             {
-                displayTilemap.SetTile(currentNode.tilePosition, displayPathTile);
+                Vector2 currentPosition = (Vector3)currentNode.tilePosition;
+                path.Add(currentPosition + new Vector2(0.5f, 0.5f));
+                if (display)
+                {
+                    displayTilemap.SetTile(currentNode.tilePosition, displayPathTile);
+                }
+                currentNode = currentNode.previousNode;
             }
-            currentNode = currentNode.previousNode;
-        }
-        Vector2 lastPosition = (Vector3)currentNode.tilePosition;
-        path.Add(lastPosition);
-        path.Reverse();
+            Vector2 lastPosition = (Vector3)currentNode.tilePosition;
+            path.Add(lastPosition);
+            path.Reverse();
 
-        Invoke("clearDisplay", this.displayActiveTime);
-        return path;
+            if (display) Invoke("clearDisplay", this.displayActiveTime);
+            return path;
+        }
+        else
+        {
+            // No path was found in 10 000 steps => there exists no path or path is too long
+            return null;
+        }
     }
-    public List<Vector2> findPath(Vector3 s, Vector3 f)
+    public List<Vector2> findShortestPath(Vector3 s, Vector3 f, Dictionary<Vector3Int, string> virtualObstacles = null, int maxCounter = 10000)
     {
         Vector3Int start = Vector3Int.FloorToInt(s);
         Vector3Int finish = Vector3Int.FloorToInt(f);
 
-        return findPath(start, finish);
+        return findShortestPath(start, finish, virtualObstacles, maxCounter);
+    }
+
+    public List<Vector2> findPathVirtualObstacles(Vector3 s, Vector3 f)
+    {
+        // Find shortest path length
+        Vector3Int start = Vector3Int.FloorToInt(s);
+        Vector3Int finish = Vector3Int.FloorToInt(f);
+        List<Vector2> shortestPath = findShortestPath(start, finish);
+        float shortestPathLength = getTotalPathLength(shortestPath);
+
+        int counter = 0;
+        while(counter < 1)
+        {
+            (Vector2, Vector2) tuple = getMinAndMax(shortestPath);
+            int minWidth = (int)tuple.Item1.x;
+            int maxWidth = (int)tuple.Item2.x;
+            int widthDif = maxWidth - minWidth;
+            if (widthDif < 10)
+            {
+                minWidth -= 10;
+                maxWidth += 10;
+            }
+            else if (widthDif > 20)
+            {
+                minWidth += widthDif/5;
+                maxWidth -= widthDif/5;
+            }
+
+            int minHeight = (int)tuple.Item1.y;
+            int maxHeight = (int)tuple.Item2.y;
+            int heightDif = maxHeight - minHeight;
+            if (heightDif < 10)
+            {
+                minHeight -= 10;
+                maxHeight += 10;
+            }
+            else if (heightDif > 20)
+            {
+                minHeight += widthDif / 5;
+                maxHeight -= widthDif / 5;
+            }
+
+            Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesMiddle(1f, minWidth, maxWidth, minHeight, maxHeight, true);
+
+            // Find path with added obstacles
+            List<Vector2> path = findShortestPath(start, finish, virtualObstacles);
+            if(path != null)
+            {
+                float pathLength = getTotalPathLength(path);
+
+                // Return path if not too long
+                if (pathLength < shortestPathLength * 2)
+                {
+                    return path;
+                }
+            }
+
+            // Add counter
+            counter++;
+        }
+
+        // Searching a random path has failed too many times
+        // Returning the shortest path
+        return shortestPath;
+    }
+    private Dictionary<Vector3Int, string> generateVirtualObstaclesEven(float chance, int minWidth, int maxWidth, int minHeight, int maxHeight, bool display = false)
+    {
+        // Chance must be between 0 and 1
+        chance = Mathf.Clamp(chance, 0, 1);
+
+        // Reset virtual obstacles
+        Dictionary<Vector3Int, string> virtualObstacles = new Dictionary<Vector3Int, string>();
+
+        // Erase previous display
+        if (display) displayTilemap.ClearAllTiles();
+
+        // Placing virtual obstacles
+        for (int width = minWidth; width < maxWidth; width++)
+        {
+            for (int height = minHeight; height < maxHeight; height++)
+            {
+                Vector3Int tilePosition = new Vector3Int(width, height, 0);
+                float random = UnityEngine.Random.Range(0f, 1f);
+                if (random < chance)
+                {
+                    virtualObstacles.Add(tilePosition, "o");
+
+                    if(display) displayTilemap.SetTile(tilePosition, displayErrorTile);
+                }
+            }
+        }
+        return virtualObstacles;
+    }
+    private Dictionary<Vector3Int, string> generateVirtualObstaclesMiddle(float chance, int minWidth, int maxWidth, int minHeight, int maxHeight, bool display = false)
+    {
+        // Chance must be between 0 and 1
+        chance = Mathf.Clamp(chance, 0, 1);
+
+        // Reset virtual obstacles
+        Dictionary<Vector3Int, string> virtualObstacles = new Dictionary<Vector3Int, string>();
+
+        // Erase previous display
+        if (display) displayTilemap.ClearAllTiles();
+
+        // Placing virtual obstacles
+        for (int width = minWidth; width < maxWidth; width++)
+        {
+            for (int height = minHeight; height < maxHeight; height++)
+            {
+                Vector3Int tilePosition = new Vector3Int(width, height, 0);
+
+                // Calculating local chance, the chance gets lower further away from the center
+                float widthDist = (maxWidth - minWidth) / 2;
+                float heightDist = (maxHeight - minHeight) / 2;
+                float currentWidthDist = Mathf.Abs(width - minWidth - widthDist);
+                float currentHeightDist = Mathf.Abs(height - minHeight - heightDist);
+                float percentage = (((currentWidthDist / widthDist) + (currentHeightDist / heightDist)) / 2);
+
+                float random = UnityEngine.Random.Range(0f, 1f);
+                // Local chance is calculated with exponential funcion
+                float localChance = chance * Mathf.Exp(-3 * percentage);
+
+                if (random < localChance)
+                {
+                    virtualObstacles.Add(tilePosition, "o");
+
+                    if (display) displayTilemap.SetTile(tilePosition, displayErrorTile);
+                }
+            }
+        }
+        return virtualObstacles;
+    }
+    private float getTotalPathLength(List<Vector2> path)
+    {
+        float length = 0;
+        for(int i = 0; i < path.Count-1; i++)
+        {
+            Vector2 currentPosition = path[i];
+            Vector2 nextPosition = path[i + 1];
+
+            length += Vector2.Distance(currentPosition, nextPosition);
+        }
+        return length;
+    }
+    private (Vector2, Vector2) getMinAndMax(List<Vector2> path)
+    {
+        if (path.Count == 0) return (new Vector2(0,0), new Vector2(0, 0));
+        float minX = path[0].x;
+        float minY = path[0].y;
+        float maxX = path[0].x;
+        float maxY = path[0].y;
+        foreach(Vector2 pos in path)
+        {
+            if(pos.x < minX)
+            {
+                minX = pos.x;
+            }
+            if(pos.x > maxX)
+            {
+                maxX = pos.x;
+            }
+
+            if (pos.y < minY)
+            {
+                minY = pos.y;
+            }
+            if (pos.y > maxY)
+            {
+                maxY = pos.y;
+            }
+        }
+        return (new Vector2(minX, minY), new Vector2(maxX, maxY));
+    }
+
+
+
+    public List<Vector2> findPathRandomGreedy(Vector3 s, Vector3 f, Dictionary<Vector3Int, string> virtualObstacles, int maxCounter)
+    {
+        Vector3Int start = Vector3Int.FloorToInt(s);
+        Vector3Int finish = Vector3Int.FloorToInt(f);
+
+        int counter = 0;
+        List<Vector2> path = new List<Vector2>();
+        Vector3Int currentPosition = start;
+        while (currentPosition != finish && counter < maxCounter)
+        {
+            path.Add(new Vector2(currentPosition.x, currentPosition.y));
+
+            List<Vector3Int> neighbors = getNeighbors(currentPosition, virtualObstacles);
+
+            // Check Random or Greedy
+            int random = UnityEngine.Random.Range(0, 10);
+            if(random < 9)
+            {
+                // Greedy
+                Vector3Int closest = getClosestNeighbor(neighbors, finish);
+                currentPosition = closest;
+            }
+            else
+            {
+                // Random
+                random = UnityEngine.Random.Range(0, neighbors.Count);
+                currentPosition = neighbors[random];
+            }
+
+            counter++;
+        }
+        if(counter < maxCounter)
+        {
+            path.Add(new Vector2(finish.x, finish.y));
+            Debug.Log("found random path");
+            return path;
+        }
+        else
+        {
+            Debug.Log("did not find random path");
+            Debug.Log("distance to finish: " + Vector2.Distance(path[path.Count-1], f));
+            if (Vector2.Distance(path[path.Count - 1], f) < 10)
+            {
+                List<Vector2> extend = findShortestPath(path[path.Count - 1], f, virtualObstacles);
+                if(extend != null)
+                {
+                    Debug.Log("extended path to finish");
+                    path.AddRange(extend);
+                    return path;
+                }
+            }
+            return null;
+        }
+    }
+
+    private Vector3Int getClosestNeighbor(List<Vector3Int> neighbors, Vector3Int f)
+    {
+        if (neighbors.Count == 0) throw new Exception("List of neighbors is empty");
+        Vector3Int closest = neighbors[0];
+        float closestDistance = Vector3Int.Distance(closest, f);
+        foreach (Vector3Int neighbor in neighbors)
+        {
+            float distance = Vector3Int.Distance(neighbor, f);
+            if(distance < closestDistance)
+            {
+                closest = neighbor;
+                closestDistance = distance;
+            }
+        }
+        return closest;
     }
 
     /// <summary>
@@ -340,16 +600,15 @@ public class PathFinding : MonoBehaviour
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    private List<Vector3Int> getNeighbors(Vector3Int position)
+    private List<Vector3Int> getNeighbors(Vector3Int position, Dictionary<Vector3Int, string> virtualObstacles = null)
     {
         List<Vector3Int> result = new List<Vector3Int>();
-        List<Vector3Int> neighborPositionsNormal = new List<Vector3Int>() { position + new Vector3Int(1, 0, 0), position + new Vector3Int(0, 1, 0), position + new Vector3Int(-1, 0, 0), position + new Vector3Int(0, -1, 0)};
-
-        List<Vector3Int> neighborPositionsDiagonal = new List<Vector3Int>() {position + new Vector3Int(1, 1, 0), position + new Vector3Int(-1, 1, 0), position + new Vector3Int(1, -1, 0), position + new Vector3Int(-1, -1, 0)};
+        List<Vector3Int> neighborPositionsNormal = new List<Vector3Int>() { position + new Vector3Int(1, 0, 0), position + new Vector3Int(0, 1, 0), position + new Vector3Int(-1, 0, 0), position + new Vector3Int(0, -1, 0) };
+        List<Vector3Int> neighborPositionsDiagonal = new List<Vector3Int>() { position + new Vector3Int(1, 1, 0), position + new Vector3Int(-1, 1, 0), position + new Vector3Int(1, -1, 0), position + new Vector3Int(-1, -1, 0) };
 
         foreach (Vector3Int neighborPosition in neighborPositionsNormal)
         {
-            if (obstacleTilemap.GetTile(neighborPosition) == null)
+            if (obstacleTilemap.GetTile(neighborPosition) == null && (virtualObstacles == null || !virtualObstacles.ContainsKey(neighborPosition)))
             {
                 result.Add(neighborPosition);
             }
@@ -358,7 +617,7 @@ public class PathFinding : MonoBehaviour
         {
             Vector3Int side1 = new Vector3Int(neighborPosition.x, position.y, 0);
             Vector3Int side2 = new Vector3Int(position.x, neighborPosition.y, 0);
-            if (obstacleTilemap.GetTile(neighborPosition) == null && (obstacleTilemap.GetTile(side1) == null || obstacleTilemap.GetTile(side2) == null))
+            if (obstacleTilemap.GetTile(neighborPosition) == null && (obstacleTilemap.GetTile(side1) == null || obstacleTilemap.GetTile(side2) == null) && (virtualObstacles == null || !virtualObstacles.ContainsKey(neighborPosition)))
             {
                 result.Add(neighborPosition);
             }

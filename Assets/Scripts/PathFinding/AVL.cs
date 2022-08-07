@@ -80,6 +80,7 @@ public class AVL : MonoBehaviour
     /// <returns></returns>
     public Node PopMinValue()
     {
+        if (this.root == null) return null;
         Node currentNode = this.root;
         while (currentNode.left != null)
         {

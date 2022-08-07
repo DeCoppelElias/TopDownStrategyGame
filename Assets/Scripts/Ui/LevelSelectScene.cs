@@ -25,6 +25,7 @@ public class LevelSelectScene : NetworkBehaviour
         Level.level = levelNumber;
         networkManager.ServerChangeScene("Level");
     }
+
     public void selectLevel(int levelNumber)
     {
         Level.level = levelNumber;
@@ -38,11 +39,8 @@ public class LevelSelectScene : NetworkBehaviour
 
     public void leaveGame()
     {
-        client.leaveGame();
-        if (client.isServer)
-        {
-
-        }
+        networkManager.ServerChangeScene("MainMenu");
+        networkManager.maxConnections = 1;
     }
 
     public void setClient(Client client)

@@ -30,6 +30,8 @@ public class Level : NetworkBehaviour
         wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
         floorTileMap = GameObject.Find("Ground").GetComponent<Tilemap>();
         decorationTilemap = GameObject.Find("Decoration").GetComponent<Tilemap>();
+
+        Invoke("setupCamera", 1);
     }
     public void initLevel()
     {

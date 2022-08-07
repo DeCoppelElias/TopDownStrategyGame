@@ -177,7 +177,7 @@ public class LevelSceneUi : MonoBehaviour
 
     public void returnToLevelSelect()
     {
-        networkManager.ServerChangeScene("MultiplayerScene");
+        networkManager.ServerChangeScene("LevelSelectScene");
     }
 
     public void displayTowerInfo(string type)

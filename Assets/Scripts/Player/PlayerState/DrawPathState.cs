@@ -123,7 +123,7 @@ public class DrawPathState : ClientState
                 }
             }
             PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
-            List<Vector2> pathExtend = pathFinding.findPath(Vector3Int.FloorToInt(path[path.Count-1]), Vector3Int.FloorToInt(closestCastle.transform.position));
+            List<Vector2> pathExtend = pathFinding.findShortestPath(Vector3Int.FloorToInt(path[path.Count-1]), Vector3Int.FloorToInt(closestCastle.transform.position));
             path.AddRange(pathExtend);
 
             clientStateManager.sendPathToPlayer(path);

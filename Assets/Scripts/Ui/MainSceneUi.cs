@@ -19,6 +19,13 @@ public class MainSceneUi : NetworkBehaviour
         mainScreenUi = GameObject.Find("MainScreenUi");
         hostMultiplayerUi = GameObject.Find("HostMultiplayerUi");
         hostMultiplayerUi.SetActive(false);
+
+        if(NetworkServer.connections.Count == 0)
+        {
+            networkManager.onlineScene = "";
+            networkManager.StartHost();
+            networkManager.maxConnections = 1;
+        }
     }
 
     public void selectMultiplayer()
@@ -35,8 +42,8 @@ public class MainSceneUi : NetworkBehaviour
 
     public void selectCreateLevel()
     {
-        networkManager.StartHost();
-        MultiplayerSceneManager.nextScene = "CreateLevelScene";
+        networkManager.ServerChangeScene("CreateLevelScene");
+        networkManager.maxConnections = 1;
     }
 
     public void exitGame()
@@ -46,21 +53,21 @@ public class MainSceneUi : NetworkBehaviour
 
     public void host()
     {
-        networkManager.StartHost();
-        MultiplayerSceneManager.nextScene = "LevelSelectScene";
+        networkManager.ServerChangeScene("LevelSelectScene");
+        networkManager.maxConnections = 4;
     }
 
     public void connect()
     {
+        networkManager.StopHost();
+
         networkManager.networkAddress = ip_inputField.text;
         networkManager.StartClient();
-        MultiplayerSceneManager.nextScene = "LevelSelectScene";
     }
 
     public void startSinglePlayer()
     {
-        networkManager.StartHost();
+        networkManager.ServerChangeScene("LevelSelectScene");
         networkManager.maxConnections = 1;
-        MultiplayerSceneManager.nextScene = "LevelSelectScene";
     }
 }

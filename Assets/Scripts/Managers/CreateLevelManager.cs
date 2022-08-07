@@ -804,8 +804,7 @@ public class CreateLevelManager : MonoBehaviour
 
     public void leaveLevelCreation()
     {
-        NetworkManager.singleton.StopHost();
-        NetworkManager.singleton.StopClient();
+        NetworkManager.singleton.ServerChangeScene("MainMenu");
     }
 
     public void saveLevel()
