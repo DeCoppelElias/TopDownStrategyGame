@@ -8,9 +8,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: 2a319b5388089774f87a40427a7f7608
-  - enabled: 0
-    path: Assets/Scenes/MultiplayerScene.unity
-    guid: 25f579ef72dd456439796906c5563ee4
   - enabled: 1
     path: Assets/Scenes/Level.unity
     guid: 2cda990e2423bbf4892e6590ba056729
@@ -20,4 +17,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/LevelSelectScene.unity
     guid: 122246ec40853c24091a6289e76746b6
+  - enabled: 1
+    path: Assets/Scenes/ConnectToServerScene.unity
+    guid: 4ac75ff5690f5dd48995775cf325b736
+  - enabled: 1
+    path: Assets/Scenes/BackToMainMenuScene.unity
+    guid: 4ccdda5f34666854c8074baaa7d4e1fc
   m_configObjects: {}

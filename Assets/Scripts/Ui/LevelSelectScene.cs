@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
+using TMPro;
+using kcp2k;
 
 public class LevelSelectScene : NetworkBehaviour
 {
@@ -12,23 +14,37 @@ public class LevelSelectScene : NetworkBehaviour
     [SerializeField]
     private Client client;
 
+    private TMP_Text amountOfClientsText;
+    [SyncVar(hook = nameof(onDetectAmountOfPlayersChanged))]
+    private int amountOfPlayers = 0;
+
+    private TMP_Text serverAdressText;
+    private TMP_Text serverPort;
+
     private void Start()
     {
-        selectLevelUi = GameObject.Find("LevelScrollView");
+        selectLevelUi = GameObject.Find("LevelScrollViews");
+        selectLevelUi.SetActive(false);
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
+
+        amountOfClientsText = GameObject.Find("ClientAmount").GetComponent<TMP_Text>();
+        serverAdressText = GameObject.Find("ServerAdressInput").GetComponent<TMP_Text>();
+        serverPort = GameObject.Find("ServerPortInput").GetComponent<TMP_Text>();
+
+        serverAdressText.text = networkManager.networkAddress;
+        serverPort.text = networkManager.GetComponent<KcpTransport>().Port.ToString();
+
+        networkManager.offlineScene = "BackToMainMenuScene";
+    }
+
+    private void onDetectAmountOfPlayersChanged(int oldAmountOfPlayers, int newAmountOfPlayers)
+    {
+        amountOfClientsText.text = newAmountOfPlayers.ToString();
     }
 
     public void selectLevel(string level)
     {
-        string s = level.Split('.')[0];
-        int levelNumber = int.Parse(s.Split('-')[1]);
-        Level.level = levelNumber;
-        networkManager.ServerChangeScene("Level");
-    }
-
-    public void selectLevel(int levelNumber)
-    {
-        Level.level = levelNumber;
+        Level.levelName = level;
         networkManager.ServerChangeScene("Level");
     }
 
@@ -39,12 +55,23 @@ public class LevelSelectScene : NetworkBehaviour
 
     public void leaveGame()
     {
-        networkManager.ServerChangeScene("MainMenu");
-        networkManager.maxConnections = 1;
+        if (client.isServer)
+        {
+            networkManager.StopHost();
+        }
+        else
+        {
+            networkManager.StopClient();
+        }
     }
 
     public void setClient(Client client)
     {
         this.client = client;
+    }
+
+    public void clientJoined()
+    {
+        amountOfPlayers += 1;
     }
 }

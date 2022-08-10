@@ -7,11 +7,13 @@ using System;
 
 public class Level : NetworkBehaviour
 {
-    public static int level = 0;
+    public static string levelName = "";
 
     private Tilemap wallTilemap;
     private Tilemap floorTileMap;
     private Tilemap decorationTilemap;
+
+    private string levelInfo = "";
 
     public int maxPlayers;
 
@@ -21,20 +23,40 @@ public class Level : NetworkBehaviour
 
     private CameraMovement cameraMovement;
 
+    private SaveLoadLevel saveLoadLevel;
+
     private void Start()
     {
         cameraMovement = GameObject.Find("Main Camera").GetComponent<CameraMovement>();
         wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
         floorTileMap = GameObject.Find("Ground").GetComponent<Tilemap>();
         decorationTilemap = GameObject.Find("Decoration").GetComponent<Tilemap>();
-    }
-    public void initLevel()
-    {
-        loadLevel();
+        saveLoadLevel = this.GetComponent<SaveLoadLevel>();
     }
 
-    private void loadLevel()
+    
+
+    [Server]
+    public void initLevelServer()
     {
-        this.GetComponent<SaveLoadLevel>().loadLevel("Level-" + Level.level);
+        saveLoadLevel.loadLevelServer(levelName);
+    }
+
+    public string getLevelInfo()
+    {
+        return saveLoadLevel.getLevelInfoString(levelName);
+    }
+
+    public void addPartOfLevelInfo(string levelInfoPart)
+    {
+        Debug.Log("received part: " + levelInfoPart);
+        this.levelInfo += levelInfoPart;
+    }
+
+    public void initLevelClient()
+    {
+        if (levelInfo == null) return;
+        saveLoadLevel = this.GetComponent<SaveLoadLevel>();
+        saveLoadLevel.loadLevelClient(levelInfo);
     }
 }

@@ -15,16 +15,13 @@ public class Client : Player
     private string selectedTower;
     private LevelSceneUi uiManager;
 
-    private Server levelSceneServer;
+    private Server server;
 
     public override void OnStartClient()
     {
-        base.OnStartClient();
-        if (!isLocalPlayer)
-        {
-            this.transform.SetParent(GameObject.Find("Clients").transform);
-            return;
-        }
+        base.OnStartClient(); 
+        this.transform.SetParent(GameObject.Find("Clients").transform);
+        if (!isLocalPlayer) return;
 
         this.name = "LocalClient";
 
@@ -32,20 +29,44 @@ public class Client : Player
         {
             LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
             levelSelectSceneSceneUi.setClient(this);
+            clientJoinedLevelSelect();
             if (isServer)
             {
                 levelSelectSceneSceneUi.activateSelectLevelUi();
             }
         }
-        
+
         else if (SceneManager.GetActiveScene().name == "Level")
+        {
+            this.server = GameObject.Find("Server").GetComponent<Server>();
+            registerClient();
+        }
+
+        else if (SceneManager.GetActiveScene().name == "MainMenu")
+        {
+            this.server = GameObject.Find("Server").GetComponent<Server>();
+        }
+    }
+    private void Update()
+    {
+        if (!isLocalPlayer) return;
+        if (SceneManager.GetActiveScene().name == "Level")
+        {
+            if (this.server.getCurrentGameState() == "Normal")
+            {
+                clientUpdate();
+            }
+        }
+    }
+
+    [TargetRpc]
+    public void clientSetup(NetworkConnection target)
+    {
+        if (SceneManager.GetActiveScene().name == "Level")
         {
             this.clientStateManager = new ClientStateManager(this);
             this.uiManager = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
-            this.levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
             this.uiManager.setupLevelSceneUi(this);
-
-            initLevel();
 
             setMaxPlayers();
 
@@ -55,31 +76,24 @@ public class Client : Player
 
             findServerClient();
 
-            Invoke("findCastleForClient", 0.5f);
+            findCastleForClient();
 
-            Invoke("registerClient", 1f);
-        }
-        else if (SceneManager.GetActiveScene().name == "MainMenu")
-        {
-            this.levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
+            Invoke("clientSetupDone", 0.5f);
         }
     }
-    private void Update()
+
+    [Command]
+    public void clientSetupDone()
     {
-        if (!isLocalPlayer) return;
-        if(SceneManager.GetActiveScene().name == "Level")
-        {
-            if (this.levelSceneServer.getCurrentGameState() == "Normal")
-            {
-                clientUpdate();
-            }
-        }
+        Server server = GameObject.Find("Server").GetComponent<Server>();
+        server.clientSetupDone();
     }
 
-    [Client]
+    [Command]
     public void registerClient()
     {
-        this.levelSceneServer.registerClient(this.gameObject);
+        Server server = GameObject.Find("Server").GetComponent<Server>();
+        server.registerClient(this.gameObject);
     }
 
     [Client]
@@ -121,32 +135,22 @@ public class Client : Player
         }
     }
 
-    /// <summary>
-    /// Will initialize the level
-    /// </summary>
-    [Client]
-    private void initLevel()
-    {
-        Level level = GameObject.Find("LevelInfo").GetComponent<Level>();
-        level.initLevel();
-    }
-
     [Client]
     public void destoryObject(GameObject obj)
     {
-        this.levelSceneServer.destoryObject(obj);
+        this.server.destoryObject(obj);
     }
 
     [Client]
     public void clientCastleDestroyed(NetworkConnection networkConnection)
     {
-        this.levelSceneServer.clientCastleDestroyed(networkConnection);
+        this.server.clientCastleDestroyed(networkConnection);
     }
 
     [Client]
     public void checkGameDoneAfterDelay()
     {
-        this.levelSceneServer.checkGameDoneAfterDelay();
+        this.server.checkGameDoneAfterDelay();
     }
 
     [Client]
@@ -214,7 +218,7 @@ public class Client : Player
             castleGameObject.transform.SetParent(castles.transform);
         }
         GameObject clients = GameObject.Find("Clients");
-        foreach(GameObject clientGameObject in GameObject.FindGameObjectsWithTag("client"))
+        foreach (GameObject clientGameObject in GameObject.FindGameObjectsWithTag("client"))
         {
             clientGameObject.transform.SetParent(clients.transform);
         }
@@ -249,7 +253,7 @@ public class Client : Player
         {
             Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Collider2D[] colliders = Physics2D.OverlapCircleAll(mousePosition, 1);
-            foreach(Collider2D collider in colliders)
+            foreach (Collider2D collider in colliders)
             {
                 Entity entity = collider.GetComponent<Entity>();
                 if (entity != null)
@@ -396,8 +400,12 @@ public class Client : Player
 
 
 
-
-
+    [Command]
+    private void clientJoinedLevelSelect()
+    {
+        LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
+        levelSelectSceneSceneUi.clientJoined();
+    }
 
     /// <summary>
     /// This method will do the necessary server updates when a client is disconnected
@@ -448,6 +456,6 @@ public class Client : Player
     public void setTroopVisibility(Troop troop, Client client, bool newVisibility)
     {
         if (troop == null || client == null) return;
-        this.levelSceneServer.setTroopVisibilityForClient(client.connectionToClient, troop.gameObject, newVisibility);
+        this.server.setTroopVisibilityForClient(client.connectionToClient, troop.gameObject, newVisibility);
     }
 }

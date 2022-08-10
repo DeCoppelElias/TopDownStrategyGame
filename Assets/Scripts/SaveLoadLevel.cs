@@ -210,23 +210,28 @@ public class SaveLoadLevel : NetworkBehaviour
 
     public void loadLevel(string levelName)
     {
-        string[] lines;
-        try
-        {
-            lines = File.ReadAllLines(Application.persistentDataPath + "/Levels/" + levelName + ".txt");
-        }
-        catch
-        {
-            lines = File.ReadAllLines(Application.dataPath + "/Levels/" + levelName + ".txt");
-        }
+        string levelInfoString = getLevelInfoString(levelName);
+        string s = levelInfoString.Replace("\r", "");
+        string[] lines = s.Split("\n"[0]);
 
+        loadLevel(lines);
+    }
+
+    public void loadLevel()
+    {
+        string levelName = inputField.text;
+        loadLevel(levelName);
+    }
+
+    public void loadLevel(string[] lines)
+    {
         // Castles
         GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
         GameObject castles = GameObject.Find("Castles");
         deleteCastles();
         foreach (string positionString in lines[1].Split('/'))
         {
-            if (positionString == "") break;
+            if (positionString == "" || positionString == "\r") break;
             string currentPositionString = positionString;
 
             // Remove the parentheses
@@ -277,10 +282,143 @@ public class SaveLoadLevel : NetworkBehaviour
         buildLevelEdgeWall(wallTile);
     }
 
-    public void loadLevel()
+    public void loadLevelServer(string levelName)
     {
-        string levelName = inputField.text;
-        loadLevel(levelName);
+        string s = getLevelInfoString(levelName).Replace("\r", "");
+        string[] lines = s.Split("\n"[0]);
+
+        // Castles
+        GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
+        GameObject castles = GameObject.Find("Castles");
+        deleteCastles();
+        foreach (string positionString in lines[1].Split('/'))
+        {
+            if (positionString == "" || positionString == "\r") break;
+            string currentPositionString = positionString;
+
+            // Remove the parentheses
+            if (currentPositionString.StartsWith("(") && currentPositionString.EndsWith(")"))
+            {
+                currentPositionString = currentPositionString.Substring(1, currentPositionString.Length - 2);
+            }
+
+            // split the items
+            string[] sArray = currentPositionString.Split(',');
+
+            // store as a Vector3
+            Vector3 castlePosition = new Vector3(
+                float.Parse(sArray[0]),
+                float.Parse(sArray[1]),
+                float.Parse(sArray[2]));
+
+            GameObject castle = Instantiate(castlePrefab, castlePosition, Quaternion.identity, castles.transform);
+            NetworkServer.Spawn(castle);
+        }
+    }
+    public void loadLevelClient(string levelInfo)
+    {
+        string s = levelInfo.Replace("\r", "");
+        string[] lines = s.Split("\n"[0]);
+
+        // Ground Tilemap
+        Tilemap groundTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
+        groundTilemap.ClearAllTiles();
+        string[] groundTileStrings = lines[3].Split('/');
+        foreach (string tileString in groundTileStrings)
+        {
+            if (tileString == "") continue;
+            spawnTile(tileString, groundTilemap);
+        }
+
+        // Wall Tilemap
+        Tilemap wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
+        wallTilemap.ClearAllTiles();
+        foreach (string tileString in lines[5].Split('/'))
+        {
+            if (tileString == "") continue;
+            spawnTile(tileString, wallTilemap);
+        }
+
+        // Decoration Tilemap
+        Tilemap decorationTileMap = GameObject.Find("Decoration").GetComponent<Tilemap>();
+        decorationTileMap.ClearAllTiles();
+        foreach (string tileString in lines[7].Split('/'))
+        {
+            if (tileString == "") continue;
+            spawnTile(tileString, decorationTileMap);
+        }
+
+        // Building a wall around the map
+        Tile wallTile = getTile("WallTile");
+        buildLevelEdgeWall(wallTile);
+    }
+
+    public string getLevelInfoString(string levelName)
+    {
+        try
+        {
+            string s = File.ReadAllText(Application.persistentDataPath + "/Levels/" + levelName);
+            return s;
+        }
+        catch
+        {
+            UnityEngine.Object officialLevelTxtFile = Resources.Load("Levels/" + levelName);
+            TextAsset textAsset = (TextAsset)officialLevelTxtFile;
+            string s = textAsset.text.Replace("\r", "");
+            return s;
+        }
+    }
+
+    public Dictionary<Tilemap, (Tile, Vector3Int)> getLevelInfoClient(string levelName)
+    {
+        Dictionary<Tilemap, (Tile, Vector3Int)> result = new Dictionary<Tilemap, (Tile, Vector3Int)>();
+
+        string levelInfoString = getLevelInfoString(levelName);
+        string s = levelInfoString.Replace("\r", "");
+        string[] lines = s.Split("\n"[0]);
+
+        // Ground Tilemap
+        Tilemap groundTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
+        foreach (string tileString in lines[3].Split('/'))
+        {
+            (Tile, Vector3Int) tuple1 = translateTileString(tileString);
+            result.Add(groundTilemap,tuple1);
+        }
+
+        // Wall Tilemap
+        Tilemap wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
+        foreach (string tileString in lines[5].Split('/'))
+        {
+            (Tile, Vector3Int) tuple2 = translateTileString(tileString);
+            result.Add(wallTilemap,tuple2);
+        }
+
+        // Decoration Tilemap
+        Tilemap decorationTileMap = GameObject.Find("Decoration").GetComponent<Tilemap>();
+        foreach (string tileString in lines[7].Split('/'))
+        {
+            (Tile, Vector3Int) tuple3 = translateTileString(tileString);
+            result.Add(decorationTileMap,tuple3);
+        }
+
+        // Wall Around the map
+        Tile wallTile = getTile("WallTile");
+        (Vector2, Vector2) tuple = findBorders();
+        Vector2 bottomLeft = tuple.Item1;
+        Vector2 topRight = tuple.Item2;
+
+        for (int x = (int)bottomLeft.x; x <= topRight.x; x++)
+        {
+            result.Add(wallTilemap, (wallTile, new Vector3Int(x, (int)bottomLeft.y, 0)));
+            result.Add(wallTilemap, (wallTile, new Vector3Int(x, (int)topRight.y, 0)));
+        }
+        for (int y = (int)bottomLeft.y; y <= topRight.y; y++)
+        {
+            result.Add(wallTilemap, (wallTile, new Vector3Int((int)bottomLeft.x, y, 0)));
+            result.Add(wallTilemap, (wallTile, new Vector3Int((int)topRight.x, y, 0)));
+        }
+
+        return result;
     }
 
     private void buildLevelEdgeWall(Tile wallTile)
@@ -325,7 +463,13 @@ public class SaveLoadLevel : NetworkBehaviour
 
     private void spawnTile(string tileString, Tilemap tilemap)
     {
-        if (tileString == "") return;
+        (Tile, Vector3Int) tuple = translateTileString(tileString);
+        tilemap.SetTile(tuple.Item2, tuple.Item1);
+    }
+
+    private (Tile, Vector3Int) translateTileString(string tileString)
+    {
+        if (tileString == "") throw new Exception("Not a valid tileString");
         string[] name_position = tileString.Split(':');
         string tileName = name_position[0];
         string tilePositionString = name_position[1];
@@ -346,7 +490,7 @@ public class SaveLoadLevel : NetworkBehaviour
             int.Parse(sArray[2]));
 
         Tile tile = (Tile)Resources.Load("Tiles/BuildableTiles/" + tileName);
-        tilemap.SetTile(tilePosition, tile);
+        return (tile, tilePosition);
     }
 
     private Tile getTile(string tileName)

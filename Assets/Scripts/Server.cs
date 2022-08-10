@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
 using UnityEngine.SceneManagement;
+using System.Text;
 
 public class Server : NetworkBehaviour
 {
-    private enum GameState { Pause, Normal, Loading };
+    private enum GameState { Pause, Normal, InitialWait, SearchingClients, LoadingLevel, SetupClients, WaitForSetupClients, SetupAi, WaitForSetupAi};
     [SyncVar]
     [SerializeField]
-    private GameState _currentGameState = GameState.Loading;
+    private GameState _currentGameState = GameState.InitialWait;
 
     [SerializeField]
     private GameObject aiClient;
@@ -17,28 +18,111 @@ public class Server : NetworkBehaviour
     [SyncVar]
     private List<Client> clients = new List<Client>();
 
+    private int amountClientsSetup = 0;
+
+    private float startTime = 0;
+
+    private int levelInfoByteCounter = 0;
+    private bool levelInfoFullySend = false;
+    private bool levelSetup = false;
+    private bool setupCastlesDone = false;
+
+    [SyncVar(hook = nameof(onLoadingInfoChanged))]
+    private string loadingInfo = "";
+    [SyncVar(hook = nameof(onLoadingDoneChanged))]
+    private bool loadingDone = false;
+
     private void Start()
     {
         if (!isServer) return;
+        startTime = Time.time;
     }
-
     private void Update()
     {
         if (!isServer) return;
 
-        if(SceneManager.GetActiveScene().name == "Level")
+        if (SceneManager.GetActiveScene().name == "Level")
         {
-            if (this._currentGameState == GameState.Loading)
+            LevelSceneUi levelSceneUi = GameObject.Find("Canvas").GetComponent<LevelSceneUi>();
+
+            if (this._currentGameState == GameState.InitialWait)
             {
-                GameObject clients = GameObject.Find("Clients");
-                if (this.clients.Count == clients.transform.childCount)
+                loadingInfo = "Waiting for clients to connect";
+
+                if (Time.time - startTime > 2)
                 {
-                    this.setupCastles();
-                    this._currentGameState = GameState.Normal;
+                    this._currentGameState = GameState.SearchingClients;
                 }
             }
 
-            if (this._currentGameState == GameState.Normal)
+            else if (this._currentGameState == GameState.SearchingClients)
+            {
+                loadingInfo = "Searching for clients";
+
+                GameObject clients = GameObject.Find("Clients");
+                if (this.clients.Count == clients.transform.childCount)
+                {
+                    this._currentGameState = GameState.LoadingLevel;
+                }
+            }
+
+            else if (this._currentGameState == GameState.LoadingLevel)
+            {
+                loadingInfo = "Loading level";
+
+                // Init server objects in level (ex castles)
+                GameObject.Find("LevelInfo").GetComponent<Level>().initLevelServer();
+
+                // Level file is really big so send in parts to clients
+                sendPartOfLevelInfoToClients();
+
+                // After all parts are send build level on clients
+                if (levelInfoFullySend) initLevelClients();
+
+                if (levelSetup) this._currentGameState = GameState.SetupClients;
+            }
+
+            else if (this._currentGameState == GameState.SetupClients)
+            {
+                loadingInfo = "Setting up clients";
+
+                foreach (Client client in this.clients)
+                {
+                    client.clientSetup(client.GetComponent<NetworkIdentity>().connectionToClient);
+                }
+                this._currentGameState = GameState.WaitForSetupClients;
+            }
+
+            else if (this._currentGameState == GameState.WaitForSetupClients)
+            {
+                loadingInfo = "Waiting for clients to setup";
+
+                if (amountClientsSetup == this.clients.Count)
+                {
+                    this._currentGameState = GameState.SetupAi;
+                }
+            }
+
+            else if (this._currentGameState == GameState.SetupAi)
+            {
+                loadingInfo = "Setting up Ai";
+
+                this.setupCastles();
+                this._currentGameState = GameState.WaitForSetupAi;
+            }
+
+            else if (this._currentGameState == GameState.WaitForSetupAi)
+            {
+                loadingInfo = "Waiting for Ai to setup";
+
+                if (setupCastlesDone)
+                {
+                    this._currentGameState = GameState.Normal;
+                    loadingDone = true;
+                }
+            }
+
+            else if (this._currentGameState == GameState.Normal)
             {
                 // Updating Ai
                 foreach (AiClient aiClient in GameObject.Find("AiClients").transform.GetComponentsInChildren<AiClient>())
@@ -54,16 +138,34 @@ public class Server : NetworkBehaviour
                 }
             }
         }
-        else if(SceneManager.GetActiveScene().name == "MainMenu")
+        else if (SceneManager.GetActiveScene().name == "MainMenu")
         {
 
         }
     }
+
+    private void onLoadingInfoChanged(string oldLoadingInfo, string newLoadingInfo)
+    {
+        GameObject.Find("Canvas").GetComponent<LevelSceneUi>().setLoadingStatus(loadingInfo);
+    }
+
+    private void onLoadingDoneChanged(bool oldLoadingDone, bool newLoadingDone)
+    {
+        if(newLoadingDone) GameObject.Find("Canvas").GetComponent<LevelSceneUi>().deactivateLoadingUi();
+    }
+
     public string getCurrentGameState()
     {
         return this._currentGameState.ToString();
     }
 
+    [Server]
+    private void changeToNormalState()
+    {
+        this._currentGameState = GameState.Normal;
+    }
+
+    [Server]
     public void registerClient(GameObject clientGameObject)
     {
         if (clientGameObject == null) throw new System.Exception("Client gameobject is null");
@@ -73,10 +175,68 @@ public class Server : NetworkBehaviour
         this.clients.Add(client);
     }
 
+    [Server]
+    public void clientSetupDone()
+    {
+        this.amountClientsSetup++;
+    }
+
     [ClientRpc]
     private void endGame()
     {
         GameObject.Find("Canvas").GetComponent<LevelSceneUi>().activateEndUi();
+    }
+
+    [Server]
+    private void sendPartOfLevelInfoToClients()
+    {
+        if (levelInfoFullySend) return;
+
+        string levelInfo = GameObject.Find("LevelInfo").GetComponent<Level>().getLevelInfo();
+        byte[] bytes = Encoding.ASCII.GetBytes(levelInfo);
+
+        // Amount of bytes that are send every frame
+        int n = 20000;
+
+        // Last part of the string will be send
+        if (levelInfoByteCounter + n > bytes.Length)
+        {
+            levelInfoFullySend = true;
+        }
+
+        // Calculating chunk
+        int upperBound = Mathf.Min(levelInfoByteCounter + n, bytes.Length);
+        byte[] chunk = new byte[upperBound - levelInfoByteCounter];
+        for (int i = levelInfoByteCounter; i < upperBound; i++)
+        {
+            chunk[i - levelInfoByteCounter] = bytes[i];
+        }
+
+        // Sending the substring to all clients
+        string substring = Encoding.ASCII.GetString(chunk);
+        sendPartOfLevelInfo(substring);
+
+        // Updating the counter
+        levelInfoByteCounter += n;
+    }
+
+    [ClientRpc]
+    private void sendPartOfLevelInfo(string subString)
+    {
+        GameObject.Find("LevelInfo").GetComponent<Level>().addPartOfLevelInfo(subString);
+    }
+
+    [Server]
+    private void initLevelClients()
+    {
+        initLevel();
+        levelSetup = true;
+    }
+
+    [ClientRpc]
+    private void initLevel()
+    {
+        GameObject.Find("LevelInfo").GetComponent<Level>().initLevelClient();
     }
 
     [TargetRpc]
@@ -162,6 +322,8 @@ public class Server : NetworkBehaviour
                 ai.GetComponent<AiClient>().castle = currentCastle;
             }
         }
+
+        setupCastlesDone = true;
     }
 
     /// <summary>

@@ -12,6 +12,9 @@ public class LevelSceneUi : MonoBehaviour
     private GameObject inGameUi;
     private GameObject optionsUi;
     private GameObject endGameUi;
+    private GameObject loadingUi;
+    private TMP_Text loadingInfo;
+
     private GameObject troopScrollView;
     private GameObject createTroopUi;
     private GameObject towerScrollView;
@@ -35,6 +38,8 @@ public class LevelSceneUi : MonoBehaviour
         towerScrollView = GameObject.Find("TowerScrollView");
         drawPathUi = GameObject.Find("DrawPathStateUi");
         selectPositionUi = GameObject.Find("SelectPositionStateUi");
+        loadingUi = GameObject.Find("LoadingUi");
+        loadingInfo = GameObject.Find("LoadingStatus").GetComponent<TMP_Text>();
         selectPositionUi.SetActive(false);
         drawPathUi.SetActive(false);
         towerScrollView.SetActive(false);
@@ -80,6 +85,7 @@ public class LevelSceneUi : MonoBehaviour
         endGameUi.SetActive(false);
         optionsUi.SetActive(false);
         inGameUi.SetActive(false);
+        loadingUi.SetActive(false);
     }
     public void activateInGameUi()
     {
@@ -140,6 +146,16 @@ public class LevelSceneUi : MonoBehaviour
         {
             towerScrollView.SetActive(true);
         }
+    }
+
+    public void setLoadingStatus(string s)
+    {
+        this.loadingInfo.text = s;
+    }
+
+    public void deactivateLoadingUi()
+    {
+        this.loadingUi.SetActive(false);
     }
 
     public void toDrawPathState()
