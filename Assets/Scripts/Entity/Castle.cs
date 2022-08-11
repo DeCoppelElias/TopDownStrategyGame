@@ -36,6 +36,7 @@ public class Castle : AttackingEntity
     private int _goldGain = 1;
     [SerializeField]
     private float _goldCooldown = 4;
+    public float GoldCooldown { get => _goldCooldown; set => _goldCooldown = value; }
     [SerializeField]
     private float _lastgoldGain = 0;
 
@@ -95,19 +96,23 @@ public class Castle : AttackingEntity
     /// <param name="spawnPosition"></param>
     public void createTower(string towerName, Vector2 spawnPosition)
     {
-        //Debug.Log("spawning at: " + spawnPosition);
+        // Check if maximum amount of towers is reached
         if(_towers.Count == maxTowers)
         {
             DebugPanel.displayDebugMessage("You have reached the maximum amount of towers");
             Debug.Log("You have reached the maximum amount of towers");
             return;
         }
+
+        // Check if not too far from castle
         if (Vector2.Distance(this.transform.position, spawnPosition) > buildRange)
         {
             DebugPanel.displayDebugMessage("Building that far away from your castle is not allowed");
             Debug.Log("Building that far away from your castle is not allowed");
             return;
         }
+
+        // Check if not in range of other towers
         foreach (Tower tower in _towers)
         {
             float distance = Vector2.Distance(spawnPosition, tower.transform.position);
@@ -119,15 +124,17 @@ public class Castle : AttackingEntity
                 return;
             }
         }
-        float distanceToCastle = Vector2.Distance(spawnPosition, this.transform.position);
-        float castleSpriteSize = this.transform.Find("AttackRing").GetComponent<SpriteRenderer>().bounds.size.x;
-        if (distanceToCastle < castleSpriteSize / 2)
+
+        // Check if not too close to castle
+        // Check if not too close to castle
+        if (Vector2.Distance(spawnPosition, this.transform.position) < Range)
         {
             Debug.Log("Building cannot be that close to your castle");
             DebugPanel.displayDebugMessage("Building cannot be that close to your castle");
             return;
         }
 
+        // Check if not inside obstacle
         Vector3Int flooredSpawnPosition = Vector3Int.FloorToInt(spawnPosition);
         if(obstacleTilemap.GetTile(flooredSpawnPosition) != null)
         {
@@ -180,12 +187,7 @@ public class Castle : AttackingEntity
         if (Vector2.Distance(this.transform.position, spawnPosition) > buildRange) return false;
 
         // Check if not too close to castle
-        float distanceToCastle = Vector2.Distance(spawnPosition, this.transform.position);
-        float castleSpriteSize = this.transform.Find("AttackRing").GetComponent<SpriteRenderer>().bounds.size.x;
-        if (distanceToCastle < castleSpriteSize / 2)
-        {
-            return false;
-        }
+        if (Vector2.Distance(spawnPosition, this.transform.position) < Range) return false;
 
         // Check if not too close to other towers
         foreach (Tower tower in _towers)
@@ -337,6 +339,7 @@ public class Castle : AttackingEntity
 
     public void createTroopWithPathVariation(string Troop, Castle castle)
     {
+        if (castle == null) return;
         PathFinding pathFinding = GameObject.Find("PathFinding").GetComponent<PathFinding>();
         List<Vector2> path = pathFinding.findPathVirtualObstacles(Vector3Int.FloorToInt(this.transform.position), Vector3Int.FloorToInt(castle.transform.position));
         createTroop(Troop, path);
@@ -433,12 +436,23 @@ public class Castle : AttackingEntity
     protected override void updateOwnerClientEventSpecific()
     {
         //Debug.Log("changed owner client of " + this + " from " + oldClient + " to " + newClient);
+
+        // All troops change owner
         foreach(Troop troop in this._troops)
         {
             troop.Owner = this.Owner;
         }
-        //Debug.Log(newClient);
+
+        // All towers change owner
+        foreach(Tower tower in this._towers)
+        {
+            tower.Owner = this.Owner;
+        }
+
+        // Change castle display
         dyeAndNameCastle(this.Owner);
+
+        // Display gold to client if new owner is client
         if (this.Owner is Client client)
         {
             client.displayGold(this._gold, this._maxGold);

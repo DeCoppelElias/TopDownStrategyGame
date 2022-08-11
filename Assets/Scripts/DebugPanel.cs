@@ -101,7 +101,12 @@ public class DebugPanel : MonoBehaviour
     /// <param name="debugMessage"></param>
     public static void displayDebugMessage(string debugMessage)
     {
-        GameObject.Find("DebugPanel").GetComponent<DebugPanel>().setText(debugMessage);
-        GameObject.Find("DebugPanel").GetComponent<DebugPanel>().startDecay();
+        GameObject debugPanelGameObject = GameObject.Find("DebugPanel");
+        if (debugPanelGameObject == null) return;
+        DebugPanel debugPanel = debugPanelGameObject.GetComponent<DebugPanel>();
+        if (debugPanel == null) return;
+
+        debugPanel.setText(debugMessage);
+        debugPanel.startDecay();
     }
 }

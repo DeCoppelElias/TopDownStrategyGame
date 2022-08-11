@@ -49,7 +49,6 @@ public class Level : NetworkBehaviour
 
     public void addPartOfLevelInfo(string levelInfoPart)
     {
-        Debug.Log("received part: " + levelInfoPart);
         this.levelInfo += levelInfoPart;
     }
 

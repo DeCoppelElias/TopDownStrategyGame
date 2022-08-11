@@ -29,6 +29,8 @@ public class AiClient : Player
 
     private void Start()
     {
+        this.transform.SetParent(GameObject.Find("AiClients").transform);
+
         troopNamesAndCosts = new Dictionary<string, int>();
         Object[] troopObjects = Resources.LoadAll("Prefabs/Entities/TroopPrefabs",typeof(GameObject));
         foreach(Object obj in troopObjects)
@@ -147,7 +149,6 @@ public class AiClient : Player
                 break;
             }
         }
-        if (target == null) throw new System.Exception("Ai cannot find castle to target");
         return target;
     }
 
@@ -159,6 +160,7 @@ public class AiClient : Player
             // Create a troop to attack a random castle
             string nextTroop = determineNextTroop();
             Castle target = determineCastle();
+            if (target == null) return;
 
             this.nextAction = new BuildTroopAction(nextTroop, troopNamesAndCosts[nextTroop], target, this.castle);
         }
@@ -168,6 +170,7 @@ public class AiClient : Player
             if (this.castle.maximumAmountOfTowers()) return;
             string nextTower = determineNextTower();
             Castle target = determineCastle();
+            if (target == null) return;
             Vector3 towerPosition = castle.generateRandomTowerPosition(target.transform.position);
 
             this.nextAction = new BuildTowerAction(nextTower, towerNamesAndCosts[nextTower], towerPosition, this.castle);

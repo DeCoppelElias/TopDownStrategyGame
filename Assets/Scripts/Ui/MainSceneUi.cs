@@ -24,33 +24,7 @@ public class MainSceneUi : NetworkBehaviour
         mainScreenUi = GameObject.Find("MainScreenUi");
         hostMultiplayerUi = GameObject.Find("HostMultiplayerUi");
         inputField = GameObject.Find("AdressInputField").GetComponent<TMP_InputField>();
-
         hostMultiplayerUi.SetActive(false);
-
-        if(NetworkServer.connections.Count == 0)
-        {
-            int port = 7777;
-            KcpTransport transport = networkManager.GetComponent<KcpTransport>();
-
-            bool found = false;
-            int counter = 0;
-            while (!found && counter < 10)
-            {
-                try
-                {
-                    transport.Port = (ushort)port;
-
-                    networkManager.StartHost();
-                    networkManager.maxConnections = 1;
-                    found = true;
-                }
-                catch (System.Exception e)
-                {
-                    port++;
-                }
-                counter++;
-            }
-        }
     }
 
     public void selectMultiplayer()

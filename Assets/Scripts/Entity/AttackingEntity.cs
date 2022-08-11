@@ -130,15 +130,22 @@ public abstract class AttackingEntity : Entity
     /// </summary>
     protected void attackTarget()
     {
-        if (!_currentTarget) return;
-        if (Time.time - _lastAttack > _attackCooldown)
+        if (_currentTarget != null && _currentTarget.Owner != this.Owner)
         {
-            attackEntity(_currentTarget);
+            if (Time.time - _lastAttack > _attackCooldown)
+            {
+                attackEntity(_currentTarget);
+            }
+            if (_currentTarget.Health <= 0)
+            {
+                killTarget();
+                searchNewTarget();
+            }
         }
-        if (_currentTarget.Health <= 0)
+        else
         {
-            killTarget();
-            searchNewTarget();
+            _currentTarget = null;
+            this._currentEntityState = EntityState.Normal;
         }
     }
 

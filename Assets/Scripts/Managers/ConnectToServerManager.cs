@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
 using kcp2k;
+using UnityEngine.SceneManagement;
 
 public class ConnectToServerManager : MonoBehaviour
 {
@@ -16,7 +17,12 @@ public class ConnectToServerManager : MonoBehaviour
 
     private void connectToServer()
     {
-        NetworkManager.singleton.offlineScene = "MainMenu";
+        NetworkManager.singleton.offlineScene = "BackToMainMenuScene";
+        NetworkManager.singleton.onlineScene = "LevelSelectScene";
+
+        NetworkManager.singleton.networkAddress = serverAdress;
+        NetworkManager.singleton.GetComponent<KcpTransport>().Port = port;
+
         NetworkManager.singleton.StartClient();
     }
 }

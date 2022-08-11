@@ -52,7 +52,7 @@ public abstract class Entity : NetworkBehaviour
     /// <param name="newClient"></param> The new owner client
     public void updateOwnerClientEvent(Player oldPlayer, Player newPlayer)
     {
-        Invoke("updateOwnerClientEventSpecific",0.1f);
+        updateOwnerClientEventSpecific();
     }
 
     /// <summary>

@@ -104,12 +104,12 @@ public class DrawPathState : ClientState
         }
         if (found)
         {
-            Debug.Log("Finished drawing");
+            //Debug.Log("Finished drawing");
             clientStateManager.sendPathToPlayer(path);
         }
         else
         {
-            Debug.Log("Path will auto extent to Enemy closest enemy castle");
+            //Debug.Log("Path will auto extent to Enemy closest enemy castle");
             Castle closestCastle = null;
             float distanceToClosest = float.MaxValue;
             foreach (GameObject castleGameObject in GameObject.FindGameObjectsWithTag("castle"))

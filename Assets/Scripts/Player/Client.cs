@@ -38,6 +38,7 @@ public class Client : Player
 
         else if (SceneManager.GetActiveScene().name == "Level")
         {
+            NetworkManager.singleton.offlineScene = "BackToMainMenuScene";
             this.server = GameObject.Find("Server").GetComponent<Server>();
             registerClient();
         }
@@ -244,6 +245,7 @@ public class Client : Player
     [Client]
     private void clientUpdate()
     {
+        if (clientStateManager == null) return;
         clientStateManager.stateActions();
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -403,6 +405,7 @@ public class Client : Player
     [Command]
     private void clientJoinedLevelSelect()
     {
+        if (!isServer) return;
         LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
         levelSelectSceneSceneUi.clientJoined();
     }

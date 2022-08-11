@@ -27,6 +27,7 @@ public class Tower : AttackingEntity
     /// </summary>
     public void dyeAndNameTower(Player newOwner)
     {
+        if (newOwner == null) return;
         if (newOwner.name == "LocalClient")
         {
             this.name = "Local" + this.name;

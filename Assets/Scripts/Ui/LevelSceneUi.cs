@@ -153,9 +153,9 @@ public class LevelSceneUi : MonoBehaviour
         this.loadingInfo.text = s;
     }
 
-    public void deactivateLoadingUi()
+    public void enableLoadingUi(bool enable)
     {
-        this.loadingUi.SetActive(false);
+        this.loadingUi.SetActive(enable);
     }
 
     public void toDrawPathState()

@@ -106,10 +106,15 @@ public abstract class Troop : AttackingEntity
 
     private void walkingToTargetState()
     {
-        if (_currentTarget != null)
+        if (_currentTarget != null && _currentTarget.Owner != this.Owner)
         {
             var step = _speed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(this.transform.position, _currentTarget.transform.position, step);
+        }
+        else
+        {
+            _currentTarget = null;
+            this._currentEntityState = EntityState.Normal;
         }
     }
 
@@ -168,6 +173,7 @@ public abstract class Troop : AttackingEntity
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 0.2f;
 
+        if (decorationCollisions == null) return;
         if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
         {
             this.globalVisibility = false;
@@ -184,6 +190,8 @@ public abstract class Troop : AttackingEntity
         _currentEntityState = AttackingEntity.EntityState.Normal;
         this.detectRingOpacity = 0.2f;
         this.attackRingOpacity = 0.2f;
+
+        if (decorationCollisions == null) return;
         if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
         {
             this.globalVisibility = false;
@@ -426,7 +434,10 @@ public abstract class Troop : AttackingEntity
 
     public void setVisibility(bool newVisibility)
     {
-        if (this.Owner.isLocalPlayer) return;
+        // Visibility of troops owner by local client is always true
+        if (this.Owner != null && this.Owner.isLocalPlayer) newVisibility = true;
+
+        // Enable or disable spriterenderer for visibility
         GetComponent<SpriteRenderer>().enabled = newVisibility;
         foreach (SpriteRenderer child in GetComponentsInChildren<SpriteRenderer>())
         {
