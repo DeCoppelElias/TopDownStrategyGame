@@ -292,7 +292,10 @@ public abstract class Troop : AttackingEntity
             _targetsToFollow.Remove(entity);
             if (this.Owner is Client owner && entity is Troop enemyTroop)
             {
-                this.ServerClient.setTroopVisibility(enemyTroop, owner, false);
+                if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
+                {
+                    this.ServerClient.setTroopVisibility(enemyTroop, owner, false);
+                }
             }
             if (_currentTarget == entity)
             {

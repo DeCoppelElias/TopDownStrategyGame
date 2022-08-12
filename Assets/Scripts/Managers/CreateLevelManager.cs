@@ -42,8 +42,6 @@ public class CreateLevelManager : MonoBehaviour
     // Basic Ui Elements
     private GameObject mainButtons;
     private GameObject levelOptions;
-    private GameObject buildOptions;
-    private GameObject selectOptions;
 
     // Infopanel Elements
     private TMP_Text buildingStateInfo;
@@ -55,7 +53,6 @@ public class CreateLevelManager : MonoBehaviour
 
     // Storing building size
     private int buildingSize = 1;
-
 
 
     // Storing the selected tiles information
@@ -149,8 +146,6 @@ public class CreateLevelManager : MonoBehaviour
         // Finding Basic Ui Elements
         this.mainButtons = basicUi.transform.Find("Main Buttons").gameObject;
         this.levelOptions = basicUi.transform.Find("Level Options").gameObject;
-        this.buildOptions = basicUi.transform.Find("Build Options").gameObject;
-        this.selectOptions = basicUi.transform.Find("Select Options").gameObject;
         resetBasicUi();
 
         // Finding InfoPanel Elements
@@ -179,12 +174,12 @@ public class CreateLevelManager : MonoBehaviour
 
     private void Update()
     {
-        if (EventSystem.current.IsPointerOverGameObject())
+        /*if (EventSystem.current.IsPointerOverGameObject())
         {
             this.previewTilemap.ClearAllTiles();
             this.selectingTilemap.ClearAllTiles();
             return;
-        }
+        }*/
 
         if (buildingState == BuildingState.Paste)
         {
@@ -210,6 +205,7 @@ public class CreateLevelManager : MonoBehaviour
     private void pasteState()
     {
         this.createSelectedTilesPreview();
+        if (EventSystem.current.IsPointerOverGameObject()) return;
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -243,6 +239,7 @@ public class CreateLevelManager : MonoBehaviour
         }
         if (Input.GetMouseButton(0))
         {
+            if (EventSystem.current.IsPointerOverGameObject()) return;
             setTileFull(mousePositionInt, this.selectedTile, this.selectedTileMap, false);
         }
     }
@@ -265,6 +262,7 @@ public class CreateLevelManager : MonoBehaviour
         }
         if (Input.GetMouseButtonDown(0))
         {
+            if (EventSystem.current.IsPointerOverGameObject()) return;
             if (this.selectedGameObject == null)
             {
                 foreach (Collider2D collider in Physics2D.OverlapCircleAll(mousePosition, 1))
@@ -295,6 +293,7 @@ public class CreateLevelManager : MonoBehaviour
     /// </summary>
     private void selectingState()
     {
+        if (EventSystem.current.IsPointerOverGameObject()) return;
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mousePosition.z = 0;
         Vector2Int mousePositionInt = Vector2Int.FloorToInt(mousePosition);
@@ -530,8 +529,6 @@ public class CreateLevelManager : MonoBehaviour
     private void resetBasicUi()
     {
         this.levelOptions.SetActive(false);
-        this.buildOptions.SetActive(false);
-        this.selectOptions.SetActive(false);
     }
 
     /// <summary>
@@ -541,7 +538,7 @@ public class CreateLevelManager : MonoBehaviour
     {
         foreach (Transform uiElement in this.canvas.GetComponentInChildren<Transform>())
         {
-            if (uiElement.name != "BasicUi")
+            if (uiElement.name != "BasicUi" && uiElement.name != "QuickSelectButtons")
             {
                 uiElement.gameObject.SetActive(false);
             }
@@ -820,22 +817,9 @@ public class CreateLevelManager : MonoBehaviour
         GameObject.Find("LoadSaveLevelManager").GetComponent<SaveLoadLevel>().loadLevel(levelName);
     }
 
-    public void OnClickSelectOptions()
-    {
-        if (this.selectOptions.activeSelf == true)
-        {
-            resetBasicUi();
-        }
-        else
-        {
-            resetBasicUi();
-            this.selectOptions.SetActive(true);
-        }
-    }
-
     public void OnClickLevelOptions()
     {
-        if (this.selectOptions.activeSelf == true)
+        if (this.levelOptions.activeSelf == true)
         {
             resetBasicUi();
         }
@@ -843,19 +827,6 @@ public class CreateLevelManager : MonoBehaviour
         {
             resetBasicUi();
             this.levelOptions.SetActive(true);
-        }
-    }
-
-    public void OnClickBuildOptions()
-    {
-        if (this.selectOptions.activeSelf == true)
-        {
-            resetBasicUi();
-        }
-        else
-        {
-            resetBasicUi();
-            this.buildOptions.SetActive(true);
         }
     }
 }

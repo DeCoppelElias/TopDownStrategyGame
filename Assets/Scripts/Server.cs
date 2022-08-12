@@ -265,13 +265,19 @@ public class Server : NetworkBehaviour
         if (clientGameObject == null) throw new System.Exception("Client gameobject is null");
         Client client = clientGameObject.GetComponent<Client>();
         if (client == null) throw new System.Exception("Gameobject is not a client");
-
         this.clients.Add(client);
 
-        // Client joines during game
-        if(this._currentGameState == GameState.Normal || this._currentGameState == GameState.Pause)
+        if (SceneManager.GetActiveScene().name == "Level")
         {
-            clientJoinesDuringGame(client);
+            // Client joines during game
+            if (this._currentGameState == GameState.Normal || this._currentGameState == GameState.Pause)
+            {
+                clientJoinesDuringGame(client);
+            }
+        }
+        else if (SceneManager.GetActiveScene().name == "LevelSelectScene")
+        {
+            Invoke("clientJoinedLevelSelect",0.5f);
         }
     }
 
@@ -290,6 +296,18 @@ public class Server : NetworkBehaviour
     public void clientSetupDone()
     {
         this.amountClientsSetup++;
+    }
+
+    [Server]
+    private void clientJoinedLevelSelect()
+    {
+        setAmountOfPlayersOnAllClients(this.clients.Count);
+    }
+
+    [ClientRpc]
+    private void setAmountOfPlayersOnAllClients(int amountOfPlayers)
+    {
+        GameObject.Find("Canvas").GetComponent<LevelSelectScene>().setAmountOfPlayers(amountOfPlayers);
     }
 
     /// <summary>

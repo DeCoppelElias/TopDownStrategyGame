@@ -16,9 +16,6 @@ public class LevelSelectScene : NetworkBehaviour
 
     private TMP_Text amountOfClientsText;
 
-    [SyncVar(hook = nameof(onDetectAmountOfPlayersChanged))]
-    private int amountOfPlayers = 0;
-
     private TMP_Text serverAdressText;
     private TMP_Text serverPort;
 
@@ -36,16 +33,9 @@ public class LevelSelectScene : NetworkBehaviour
         serverPort.text = networkManager.GetComponent<KcpTransport>().Port.ToString();
 
         networkManager.offlineScene = "BackToMainMenuScene";
-
-        amountOfClientsText.text = amountOfPlayers.ToString();
     }
 
-    private void Update()
-    {
-        Debug.Log(amountOfPlayers);
-    }
-
-    private void onDetectAmountOfPlayersChanged(int oldAmountOfPlayers, int newAmountOfPlayers)
+    public void setAmountOfPlayers(int newAmountOfPlayers)
     {
         TMP_Text amountOfClientsText = GameObject.Find("ClientAmount").GetComponent<TMP_Text>();
         amountOfClientsText.text = newAmountOfPlayers.ToString();
@@ -77,11 +67,5 @@ public class LevelSelectScene : NetworkBehaviour
     public void setClient(Client client)
     {
         this.client = client;
-    }
-
-    [Server]
-    public void clientJoined()
-    {
-        amountOfPlayers += 1;
     }
 }

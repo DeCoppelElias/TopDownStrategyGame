@@ -25,11 +25,18 @@ public class Client : Player
 
         this.name = "LocalClient";
 
+        GameObject serverGameObject = GameObject.Find("Server");
+        if(serverGameObject != null)
+        {
+            this.server = serverGameObject.GetComponent<Server>();
+        }
+
+        registerClient();
+
         if (SceneManager.GetActiveScene().name == "LevelSelectScene")
         {
             LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
             levelSelectSceneSceneUi.setClient(this);
-            clientJoinedLevelSelect();
             if (isServer)
             {
                 levelSelectSceneSceneUi.activateSelectLevelUi();
@@ -39,8 +46,6 @@ public class Client : Player
         else if (SceneManager.GetActiveScene().name == "Level")
         {
             NetworkManager.singleton.offlineScene = "BackToMainMenuScene";
-            this.server = GameObject.Find("Server").GetComponent<Server>();
-            registerClient();
         }
 
         else if (SceneManager.GetActiveScene().name == "MainMenu")
@@ -86,14 +91,20 @@ public class Client : Player
     [Command]
     public void clientSetupDone()
     {
-        Server server = GameObject.Find("Server").GetComponent<Server>();
+        GameObject serverGameObject = GameObject.Find("Server");
+        if (serverGameObject == null) return;
+        Server server = serverGameObject.GetComponent<Server>();
+        if (server == null) return;
         server.clientSetupDone();
     }
 
     [Command]
     public void registerClient()
     {
-        Server server = GameObject.Find("Server").GetComponent<Server>();
+        GameObject serverGameObject = GameObject.Find("Server");
+        if (serverGameObject == null) return;
+        Server server = serverGameObject.GetComponent<Server>();
+        if (server == null) return;
         server.registerClient(this.gameObject);
     }
 
@@ -397,17 +408,6 @@ public class Client : Player
         SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
         if (spriteRenderer == null) return;
         detectRing.transform.localScale = scale;
-    }
-
-
-
-
-    [Command]
-    private void clientJoinedLevelSelect()
-    {
-        if (!isServer) return;
-        LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
-        levelSelectSceneSceneUi.clientJoined();
     }
 
     /// <summary>
