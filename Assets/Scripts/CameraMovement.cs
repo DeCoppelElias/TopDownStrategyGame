@@ -9,8 +9,12 @@ using UnityEngine.U2D;
 public class CameraMovement : MonoBehaviour
 {
     [SerializeField]
-    private bool _boundedCamera = false;
-    public bool BoundedCamera { get => _boundedCamera; set => _boundedCamera = value; }
+    private bool _boundedMovement = false;
+    public bool BoundedMovement { get => _boundedMovement; set => _boundedMovement = value; }
+    [SerializeField]
+    private bool _boundedZoom = false;
+    public bool BoundedZoom { get => _boundedZoom; set => _boundedZoom = value; }
+
     [SerializeField]
     private bool _movableCamera = false;
     public bool MovableCamera { get => _movableCamera; set => _movableCamera = value; }
@@ -43,7 +47,7 @@ public class CameraMovement : MonoBehaviour
     void Start()
     {
         mainCamera = this.GetComponent<Camera>();
-        if(BoundedCamera) setCameraBounds();
+        if(BoundedMovement) setCameraBounds();
         targetZoom = maxZoom;
     }
 
@@ -62,25 +66,26 @@ public class CameraMovement : MonoBehaviour
 
     private void moveCamera()
     {
+        int currentMoveSpeed = (int)(moveSpeed * (targetZoom / maxZoom));
         Vector3 movement = new Vector3(0, 0, 0);
         if (Input.GetKey(KeyCode.RightArrow))
         {
-            movement.x += moveSpeed * Time.deltaTime;
+            movement.x += currentMoveSpeed * Time.deltaTime;
         }
         if (Input.GetKey(KeyCode.LeftArrow))
         {
-            movement.x -= moveSpeed * Time.deltaTime;
+            movement.x -= currentMoveSpeed * Time.deltaTime;
         }
         if (Input.GetKey(KeyCode.DownArrow))
         {
-            movement.y -= moveSpeed * Time.deltaTime;
+            movement.y -= currentMoveSpeed * Time.deltaTime;
         }
         if (Input.GetKey(KeyCode.UpArrow))
         {
-            movement.y += moveSpeed * Time.deltaTime;
+            movement.y += currentMoveSpeed * Time.deltaTime;
         }
         transform.Translate(movement);
-        if (BoundedCamera)
+        if (BoundedMovement)
         {
             transform.position = new Vector3(Mathf.Clamp(transform.position.x, cameraMin_x, cameraMax_x), Mathf.Clamp(transform.position.y, cameraMin_y, cameraMax_y), transform.position.z);
         }
@@ -90,7 +95,7 @@ public class CameraMovement : MonoBehaviour
     {
         float scrollData = Input.GetAxis("Mouse ScrollWheel");
         targetZoom -= scrollData * zoomSpeed;
-        targetZoom = Mathf.Clamp(targetZoom, minZoom, maxZoom);
+        if(BoundedZoom) targetZoom = Mathf.Clamp(targetZoom, minZoom, maxZoom);
         setZoomSubtle(targetZoom);
     }
 
@@ -133,7 +138,7 @@ public class CameraMovement : MonoBehaviour
 
     public void refreshCameraBounds()
     {
-        if (!BoundedCamera) return;
+        if (!BoundedMovement) return;
         float vertExtent = mainCamera.orthographicSize;
         float horzExtent = vertExtent * Screen.width / Screen.height;
         cameraMax_x = topRight.x - horzExtent;
@@ -143,7 +148,7 @@ public class CameraMovement : MonoBehaviour
 
         if(cameraMax_x < cameraMin_x || cameraMax_y < cameraMin_y)
         {
-            BoundedCamera = false;
+            BoundedMovement = false;
         }
     }
 

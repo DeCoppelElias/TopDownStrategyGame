@@ -3,35 +3,23 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
-public class AVL : MonoBehaviour
+public class AVL
 {
-    public class Node
+    public abstract class Node : ICloneable
     {
-        public Node previousNode;
-        public Vector3Int tilePosition;
-        public float distanceToFinish;
-        public float distancePath;
-
         public Node left;
         public Node right;
-        public Node(float distancePath, float distanceToFinish, Vector3Int tilePosition, Node previousNode)
+        public Vector3Int tilePosition;
+
+        public Node(Vector3Int tilePosition)
         {
             this.tilePosition = tilePosition;
-            this.previousNode = previousNode;
-
-            this.distancePath = distancePath;
-            this.distanceToFinish = distanceToFinish;
         }
+        public abstract object Clone();
 
-        public float getData()
-        {
-            return this.distancePath + this.distanceToFinish;
-        }
+        public abstract float getCost();
 
-        public override int GetHashCode()
-        {
-            return this.tilePosition.x * 1000000 + tilePosition.y;
-        }
+        public override abstract int GetHashCode();
     }
 
     Node root;
@@ -61,17 +49,22 @@ public class AVL : MonoBehaviour
             current = n;
             return current;
         }
-        else if (n.getData() < current.getData())
+        else if (n.getCost() < current.getCost())
         {
             current.left = RecursiveInsert(current.left, n);
             current = balance_tree(current);
         }
-        else if (n.getData() >= current.getData())
+        else if (n.getCost() >= current.getCost())
         {
             current.right = RecursiveInsert(current.right, n);
             current = balance_tree(current);
         }
         return current;
+    }
+
+    public bool isEmpty()
+    {
+        return this.root == null;
     }
 
     /// <summary>
@@ -86,7 +79,7 @@ public class AVL : MonoBehaviour
         {
             currentNode = currentNode.left;
         }
-        Node result = new Node(currentNode.distancePath, currentNode.distanceToFinish, currentNode.tilePosition, currentNode.previousNode);
+        Node result = (Node)currentNode.Clone();
         Delete(currentNode);
         result.left = null;
         result.right = null;
@@ -108,7 +101,7 @@ public class AVL : MonoBehaviour
         else
         {
             //left subtree
-            if (node.getData() < current.getData())
+            if (node.getCost() < current.getCost())
             {
                 current.left = Delete(current.left, node, current);
                 if (balance_factor(current) == -2)//here
@@ -124,7 +117,7 @@ public class AVL : MonoBehaviour
                 }
             }
             //right subtree
-            else if (node.getData() > current.getData())
+            else if (node.getCost() > current.getCost())
             {
                 current.right = Delete(current.right, node, current);
                 if (balance_factor(current) == 2)
@@ -139,7 +132,7 @@ public class AVL : MonoBehaviour
                     }
                 }
             }
-            else if (node.getData() == current.getData() && node.tilePosition != current.tilePosition)
+            else if (node.getCost() == current.getCost() && node.tilePosition != current.tilePosition)
             {
                 if (Contains(current.right, node))
                 {
@@ -181,7 +174,7 @@ public class AVL : MonoBehaviour
                 }
             }
             //if target is found
-            else if (node.getData() == current.getData() && node.tilePosition == current.tilePosition)
+            else if (node.getCost() == current.getCost() && node.tilePosition == current.tilePosition)
             {
                 if (current.right != null)
                 {

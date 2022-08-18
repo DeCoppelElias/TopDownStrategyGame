@@ -36,10 +36,39 @@ public class PathFinding : MonoBehaviour
     private float lastUpdate = 0;
 
     private AVL avlTree = new AVL();
-    private Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
+    private Dictionary<int, PathFindingNode> storedNodes = new Dictionary<int, PathFindingNode>();
     private Dictionary<int,int> expandedNodes = new Dictionary<int,int>();
-    private Node currentNode;
+    private PathFindingNode currentNode;
     private int counter = 0;
+
+    private class PathFindingNode : Node
+    {
+        public PathFindingNode previousNode;
+        public float distanceToFinish;
+        public float distancePath;
+        public PathFindingNode(float distancePath, float distanceToFinish, Vector3Int tilePosition, PathFindingNode previousNode) : base(tilePosition)
+        {
+            this.previousNode = previousNode;
+
+            this.distancePath = distancePath;
+            this.distanceToFinish = distanceToFinish;
+        }
+
+        public override object Clone()
+        {
+            return new PathFindingNode(this.distancePath, this.distanceToFinish, this.tilePosition, this.previousNode);
+        }
+
+        public override float getCost()
+        {
+            return this.distancePath + this.distanceToFinish;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.tilePosition.x * 1000000 + tilePosition.y;
+        }
+    }
 
     private void Start()
     {
@@ -130,18 +159,18 @@ public class PathFinding : MonoBehaviour
         int counter = 0;
 
         // Storing all expandable nodes with hashcode
-        Dictionary<int, Node> storedNodes = new Dictionary<int, Node>();
+        Dictionary<int, PathFindingNode> storedNodes = new Dictionary<int, PathFindingNode>();
         // Storing all expanded nodes so they don't get added again
         Dictionary<int, int> expandedNodes = new Dictionary<int, int>();
         // Balanced tree for finding best node to expand
         AVL avlTree = new AVL();
 
         // Start expanding with start node
-        Node firstNode = new Node(0, 0, start, null);
+        PathFindingNode firstNode = new PathFindingNode(0, 0, start, null);
         avlTree.Add(firstNode);
         storedNodes.Add(firstNode.GetHashCode(), firstNode);
 
-        Node currentNode = avlTree.PopMinValue();
+        PathFindingNode currentNode = (PathFindingNode)avlTree.PopMinValue();
         while (currentNode.tilePosition != finish && counter < maxCounter)
         {
             // Display current node
@@ -153,7 +182,7 @@ public class PathFinding : MonoBehaviour
             {
                 float distanceToFinish = Vector3Int.Distance(neighborPosition, finish);
                 float distancePath = currentNode.distancePath + Vector3Int.Distance(currentNode.tilePosition, neighborPosition);
-                Node neighborNode = new Node(distancePath, distanceToFinish, neighborPosition, currentNode);
+                PathFindingNode neighborNode = new PathFindingNode(distancePath, distanceToFinish, neighborPosition, currentNode);
                 int hashCode = neighborNode.GetHashCode();
 
                 // Check if neighbor has already been expanded
@@ -162,7 +191,7 @@ public class PathFinding : MonoBehaviour
                     // Check if neighbor already has been discovered
                     if (storedNodes.ContainsKey(hashCode))
                     {
-                        Node node = storedNodes[hashCode];
+                        PathFindingNode node = storedNodes[hashCode];
                         // if this node has a shorter path than previous discovery => replace it
                         if (distancePath < node.distancePath)
                         {
@@ -181,7 +210,7 @@ public class PathFinding : MonoBehaviour
                 }
             }
             // Get next node depending on: distance from start + distance to finish
-            currentNode = avlTree.PopMinValue();
+            currentNode = (PathFindingNode)avlTree.PopMinValue();
             expandedNodes.Add(currentNode.GetHashCode(), 0);
             storedNodes.Remove(currentNode.GetHashCode());
 
@@ -486,15 +515,15 @@ public class PathFinding : MonoBehaviour
         else
         {
             this.counter = 0;
-            this.storedNodes = new Dictionary<int, Node>();
+            this.storedNodes = new Dictionary<int, PathFindingNode>();
             this.expandedNodes = new Dictionary<int, int>();
             this.avlTree = new AVL();
 
-            Node firstNode = new Node(0, 0, debugStart, null);
+            PathFindingNode firstNode = new PathFindingNode(0, 0, debugStart, null);
             avlTree.Add(firstNode);
             storedNodes.Add(firstNode.GetHashCode(), firstNode);
 
-            this.currentNode = avlTree.PopMinValue();
+            this.currentNode = (PathFindingNode)avlTree.PopMinValue();
             displayTilemap.SetTile(currentNode.tilePosition, displaySearchedTile);
         }
     }
@@ -528,14 +557,14 @@ public class PathFinding : MonoBehaviour
                 {
                     float distanceToFinish = Vector3Int.Distance(neighborPosition, debugFinish);
                     float distancePath = currentNode.distancePath + Vector3Int.Distance(currentNode.tilePosition, neighborPosition);
-                    Node neighborNode = new Node(distancePath, distanceToFinish, neighborPosition, currentNode);
+                    PathFindingNode neighborNode = new PathFindingNode(distancePath, distanceToFinish, neighborPosition, currentNode);
                     int hashCode = neighborNode.GetHashCode();
 
                     if (!expandedNodes.ContainsKey(hashCode))
                     {
                         if (storedNodes.ContainsKey(hashCode))
                         {
-                            Node node = storedNodes[hashCode];
+                            PathFindingNode node = storedNodes[hashCode];
                             if (distancePath < node.distancePath)
                             {
                                 avlTree.Delete(node);
@@ -552,7 +581,7 @@ public class PathFinding : MonoBehaviour
                         }
                     }
                 }
-                currentNode = avlTree.PopMinValue();
+                currentNode = (PathFindingNode)avlTree.PopMinValue();
                 expandedNodes.Add(currentNode.GetHashCode(),0);
                 storedNodes.Remove(currentNode.GetHashCode());
             }

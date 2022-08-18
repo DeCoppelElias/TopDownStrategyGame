@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Tower : AttackingEntity
 {
@@ -85,11 +86,14 @@ public class Tower : AttackingEntity
 
     public override void detectClick()
     {
-        Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
-        if (localClient.getClientState() == "ViewingState")
+        if (SceneManager.GetActiveScene().name == "Level")
         {
-            Dictionary<string, object> info = getEntityInfo();
-            localClient.displayInfo(info);
+            Client localClient = GameObject.Find("LocalClient").GetComponent<Client>();
+            if (localClient.getClientState() == "ViewingState")
+            {
+                Dictionary<string, object> info = getEntityInfo();
+                localClient.displayInfo(info);
+            }
         }
     }
 

@@ -18,8 +18,8 @@ public class SaveLoadLevel : NetworkBehaviour
     private float lastSavingStep = 0;
 
     // Width and height of screenshot starting at bottom
-    private int width = 100;
-    private int height = 100;
+    private int width = 150;
+    private int height = 150;
 
     Vector3 oldPosition;
     float oldOrthographicSize;
@@ -28,13 +28,19 @@ public class SaveLoadLevel : NetworkBehaviour
     private Tilemap floorTilemap;
     private Tilemap decorationTilemap;
 
-    private Canvas canvas;
+    private GameObject normalUi;
+    private GameObject savingLevelUi;
+    private TMP_Text savingLevelInfo;
+
     private StreamWriter writer;
     private WaitForEndOfFrame frameEnd = new WaitForEndOfFrame();
 
     private void Start()
     {
-        canvas = GameObject.Find("Canvas").GetComponent<Canvas>();
+        normalUi = GameObject.Find("NormalUi");
+        savingLevelUi = GameObject.Find("SavingLevelUi");
+        savingLevelUi.SetActive(false);
+        savingLevelInfo = savingLevelUi.transform.Find("SavingLevelInfo").GetComponent<TMP_Text>();
 
         floorTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
         wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
@@ -53,7 +59,6 @@ public class SaveLoadLevel : NetworkBehaviour
 
             // Wait till the last possible moment before screen rendering to hide the UI
             yield return null;
-            canvas.enabled = false;
 
             // Wait for screen rendering to complete
             yield return frameEnd;
@@ -61,7 +66,7 @@ public class SaveLoadLevel : NetworkBehaviour
             string levelString = "";
             if (savingStep == 0)
             {
-                Debug.Log("Starting to save level");
+                savingLevelInfo.text = "Starting to save level";
 
                 // Castles
                 levelString += "Castle Positions:\n";
@@ -71,7 +76,7 @@ public class SaveLoadLevel : NetworkBehaviour
                 }
 
                 writer.WriteLine(levelString);
-                Debug.Log("Castle positions have been saved");
+                savingLevelInfo.text = "Castle positions have been saved";
 
                 savingStep += 1;
             }
@@ -89,7 +94,7 @@ public class SaveLoadLevel : NetworkBehaviour
                 }
 
                 writer.WriteLine(levelString);
-                Debug.Log("Ground Tilemap has been saved");
+                savingLevelInfo.text = "Ground Tilemap has been saved";
 
                 savingStep += 1;
             }
@@ -107,7 +112,7 @@ public class SaveLoadLevel : NetworkBehaviour
                 }
 
                 writer.WriteLine(levelString);
-                Debug.Log("Walls Tilemap has been saved");
+                savingLevelInfo.text = "Walls Tilemap has been saved";
 
                 savingStep += 1;
             }
@@ -126,16 +131,12 @@ public class SaveLoadLevel : NetworkBehaviour
                 levelString += "\n";
 
                 writer.WriteLine(levelString);
-                Debug.Log("Decoration Tilemap has been saved");
+                savingLevelInfo.text = "Decoration Tilemap has been saved";
 
                 savingStep += 1;
             }
             else if (savingStep == 4)
             {
-                // PNG image of level for level selection
-                levelString += "PNG: ";
-                // Create a texture the size of the screen, RGB24 format
-
                 // Adjust camera position for screenshot
                 // old camera values
                 oldPosition = Camera.main.transform.position;
@@ -145,8 +146,23 @@ public class SaveLoadLevel : NetworkBehaviour
                 Vector2 bottomLeft = tuple.Item1;
                 Vector2 topRight = tuple.Item2;
 
-                float newOrthographicSizeNormalScreen = (topRight.y - bottomLeft.y) / 2;
-                float newOrthographicSizeAdjusted = newOrthographicSizeNormalScreen * (Screen.height / height);
+                float levelHeight = topRight.y - bottomLeft.y;
+                float levelWidth = topRight.x - bottomLeft.x;
+
+                float newOrthographicSizeNormalScreen = 0;
+                float newOrthographicSizeAdjusted = 0;
+
+                if (levelHeight > levelWidth)
+                {
+                    newOrthographicSizeNormalScreen = levelHeight / 2;
+                    newOrthographicSizeAdjusted = newOrthographicSizeNormalScreen * ((float)Screen.height / height);
+                }
+                else
+                {
+                    newOrthographicSizeNormalScreen = (levelWidth / 2) * ((float)Screen.height / Screen.width);
+                    newOrthographicSizeAdjusted = newOrthographicSizeNormalScreen * ((float)Screen.width / width);
+                }
+
                 CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
                 cameraMovement.ZoomableCamera = false;
                 cameraMovement.MovableCamera = false;
@@ -158,20 +174,28 @@ public class SaveLoadLevel : NetworkBehaviour
                 Vector3 newCameraPosition = new Vector3(bottomLeft.x + horzExtent, bottomLeft.y + vertExtent, Camera.main.transform.position.z);
                 Camera.main.transform.position = newCameraPosition;
 
-                writer.WriteLine(levelString);
-                Debug.Log("Adjusted camera for screenshot");
+
+                // Disable Ui
+                this.savingLevelUi.SetActive(false);
+
+                savingLevelInfo.text = "Adjusted camera for screenshot";
 
                 savingStep += 1;
             }
             else if (savingStep == 5)
             {
+
+                // PNG image of level for level selection
+                levelString += "PNG: \n";
+
+                // Create a texture the size of the screen, RGB24 format
                 Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
 
                 // Read screen contents into the texture
                 tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
 
-                Camera.main.transform.position = oldPosition;
-                Camera.main.GetComponent<CameraMovement>().setMaxZoom(oldOrthographicSize);
+                // Enable Ui again
+                this.savingLevelUi.SetActive(true);
 
                 // Encode texture into PNG
                 byte[] bytes = tex.EncodeToPNG();
@@ -189,21 +213,34 @@ public class SaveLoadLevel : NetworkBehaviour
                 writer.WriteLine(levelString);
                 writer.Close();
 
-                CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
+                /*CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
                 cameraMovement.ZoomableCamera = true;
-                cameraMovement.MovableCamera = true;
+                cameraMovement.MovableCamera = true;*/
 
-                canvas.enabled = true;
-                Debug.Log("Level is fully saved");
+                Camera.main.transform.position = oldPosition;
+                Camera.main.orthographicSize = oldOrthographicSize;
+
+                savingLevelInfo.text = "Level is fully saved";
 
                 saving = false;
                 savingStep = 0;
+                resetUi();
             }
         }
+    }
+
+    public void resetUi()
+    {
+        normalUi.SetActive(true);
+        savingLevelUi.SetActive(false);
+        savingLevelInfo.text = "";
     }
     
     public void saveLevel(string levelName)
     {
+        normalUi.SetActive(false);
+        savingLevelUi.SetActive(true);
+
         saving = true;
         writer = new StreamWriter(Application.persistentDataPath + "/Levels/" + levelName + ".txt", false);
     }
@@ -456,7 +493,7 @@ public class SaveLoadLevel : NetworkBehaviour
         int maxY = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
 
         Vector2 bottomLeft = new Vector2(minX - 1, minY - 1);
-        Vector2 topRight = new Vector2(maxX, maxY);
+        Vector2 topRight = new Vector2(maxX + 1, maxY + 1);
 
         return (bottomLeft, topRight);
     }

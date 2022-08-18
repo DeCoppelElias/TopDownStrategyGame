@@ -77,7 +77,7 @@ SpriteRenderer:
   m_SortingLayerID: 548644899
   m_SortingLayer: 1
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: df1370e397248db43a88cebd47d8618f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 189a3211cb7d8584bbf2df20e1d8e72a, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -162,7 +162,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
+    oldSize: {x: 3, y: 3}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -233,6 +233,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1519525055540598650}
     m_Modifications:
+    - target: {fileID: -1564781298910889833, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
+      propertyPath: m_AssetId
+      value: d5de355d6b1b50845929f9f53a46f1b9
+      objectReference: {fileID: 0}
     - target: {fileID: 314340021441773713, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
       propertyPath: m_Name
       value: AttackRing

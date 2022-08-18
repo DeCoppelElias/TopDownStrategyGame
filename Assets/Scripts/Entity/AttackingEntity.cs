@@ -52,6 +52,7 @@ public abstract class AttackingEntity : Entity
         Vector3 scale = new Vector3((_range * 2) + 1, (_range * 2) + 1, 0);
         this.attackRingOpacity = 0.2f;
         this.attackRingScale = scale;
+        
     }
 
     /// <summary>
@@ -170,23 +171,18 @@ public abstract class AttackingEntity : Entity
 
     public void onAttackRingChangeOpacity(float oldOpacity, float newOpacity)
     {
-        Invoke("updateAttackRingOpacity", 0.1f);
-    }
+        GameObject attackRing = this.transform.Find("AttackRing").gameObject;
+        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
 
-    private void updateAttackRingOpacity()
-    {
-        if (ServerClient == null) return;
-        this.ServerClient.updateAttackRingOfGameObject(this.gameObject, this.attackRingOpacity);
+        Color alphaColor = spriteRenderer.color;
+        alphaColor.a = newOpacity;
+        spriteRenderer.color = alphaColor;
     }
 
     public void onAttackRingChangeScale(Vector3 oldScale, Vector3 newScale)
     {
-        Invoke("updateAttackRingScale", 0.1f);
-    }
-
-    private void updateAttackRingScale()
-    {
-        if (ServerClient == null) return;
-        this.ServerClient.updateAttackRingOfGameObject(this.gameObject, this.attackRingScale);
+        GameObject attackRing = this.transform.Find("AttackRing").gameObject;
+        attackRing.transform.localScale = newScale;
     }
 }

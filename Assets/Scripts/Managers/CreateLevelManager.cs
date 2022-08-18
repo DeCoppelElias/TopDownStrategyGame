@@ -1,10 +1,12 @@
 ﻿using Mirror;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
 using UnityEngine.UI;
+using static AVL;
 
 public class CreateLevelManager : MonoBehaviour
 {
@@ -29,7 +31,7 @@ public class CreateLevelManager : MonoBehaviour
     private SelectingTile customSelectingTile;
 
     // Current building state
-    private enum BuildingState { BuildingTiles, BuildingGameObjects, Viewing, Selecting, Paste}
+    private enum BuildingState { BuildingTiles, BuildingGameObjects, Viewing, Selecting, Paste, DrawingLine, DrawingRectangle, Fill}
     private BuildingState buildingState = BuildingState.Viewing;
 
     // Main Ui Elements
@@ -37,7 +39,7 @@ public class CreateLevelManager : MonoBehaviour
     private GameObject buildingGameObjectsUi;
     private GameObject basicUi;
     private GameObject infoPanel;
-    private GameObject canvas;
+    private GameObject normalUi;
 
     // Basic Ui Elements
     private GameObject mainButtons;
@@ -45,15 +47,16 @@ public class CreateLevelManager : MonoBehaviour
 
     // Infopanel Elements
     private TMP_Text buildingStateInfo;
-    private TMP_Text selectedTileText;
-    private TMP_Text selectedTilemapText;
-    private TMP_Text selectedGameObjectText;
-    private GameObject buildingTileInfo;
-    private GameObject buildingGameObjectInfo;
+    private TMP_Text firstLine;
+    private TMP_Text secondLine;
+    private GameObject buildingInfo;
 
     // Storing building size
     private int buildingSize = 1;
 
+    // Preview for empty tile
+    [SerializeField]
+    private Tile emptyTilePreview;
 
     // Storing the selected tiles information
     private SelectedTiles selectedTiles;
@@ -141,7 +144,7 @@ public class CreateLevelManager : MonoBehaviour
         this.buildingGameObjectsUi.SetActive(false);
         this.infoPanel = GameObject.Find("InfoPanel");
         this.infoPanel.SetActive(false);
-        this.canvas = GameObject.Find("Canvas");
+        this.normalUi = GameObject.Find("NormalUi");
 
         // Finding Basic Ui Elements
         this.mainButtons = basicUi.transform.Find("Main Buttons").gameObject;
@@ -149,13 +152,15 @@ public class CreateLevelManager : MonoBehaviour
         resetBasicUi();
 
         // Finding InfoPanel Elements
-        this.buildingTileInfo = infoPanel.transform.Find("BuildingTileInfo").gameObject;
-        this.buildingGameObjectInfo = infoPanel.transform.Find("BuildingGameObjectInfo").gameObject;
+        this.buildingInfo = infoPanel.transform.Find("BuildingInfo").gameObject;
 
         this.buildingStateInfo = infoPanel.transform.Find("BuildingState").GetComponent<TMP_Text>();
-        this.selectedTileText = buildingTileInfo.transform.Find("Current Tile").GetComponent<TMP_Text>();
-        this.selectedTilemapText = buildingTileInfo.transform.Find("Current Tilemap").GetComponent<TMP_Text>();
-        this.selectedGameObjectText = buildingGameObjectInfo.transform.Find("Current GameObject").GetComponent<TMP_Text>();
+        this.firstLine = buildingInfo.transform.Find("First Line").GetComponent<TMP_Text>();
+        this.secondLine = buildingInfo.transform.Find("Second Line").GetComponent<TMP_Text>();
+
+        // Setting standard tilemap and tile
+        this.selectFloor();
+        this.setTile(null);
 
         // Creating buttons for selecting tiles to build
         GameObject buttonPrefab = Resources.Load("Prefabs/Button") as GameObject;
@@ -174,28 +179,330 @@ public class CreateLevelManager : MonoBehaviour
 
     private void Update()
     {
-        /*if (EventSystem.current.IsPointerOverGameObject())
-        {
-            this.previewTilemap.ClearAllTiles();
-            this.selectingTilemap.ClearAllTiles();
-            return;
-        }*/
-
         if (buildingState == BuildingState.Paste)
         {
             pasteState();
         }
-        if (buildingState == BuildingState.Selecting)
+        else if (buildingState == BuildingState.Selecting)
         {
             selectingState();
         }
-        if (buildingState == BuildingState.BuildingTiles)
+        else if (buildingState == BuildingState.BuildingTiles)
         {
             buildingTilesState();
         }
-        if (buildingState == BuildingState.BuildingGameObjects)
+        else if (buildingState == BuildingState.BuildingGameObjects)
         {
             buildingGameObjectsState();
+        }
+        else if (buildingState == BuildingState.DrawingLine)
+        {
+            drawingLineState();
+        }
+        else if (buildingState == BuildingState.DrawingRectangle)
+        {
+            drawingRectangleState();
+        }
+        else if (buildingState == BuildingState.Fill)
+        {
+            fillState();
+        }
+    }
+
+    private void fillState()
+    {
+        if (EventSystem.current.IsPointerOverGameObject()) return;
+
+        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePosition.z = 0;
+        Vector3Int mousePositionInt = Vector3Int.FloorToInt(mousePosition);
+
+        // Check if exit state
+        if (Input.GetMouseButtonDown(1))
+        {
+            toBuildTileState();
+        }
+
+        // Store start point
+        if (Input.GetMouseButtonDown(0))
+        {
+            fill(this.selectedTile, this.selectedTileMap, mousePositionInt);
+        }
+    }
+
+    private class FillNode : Node
+    {
+        public Vector3Int startPosition;
+        public FillNode(Vector3Int startPosition, Vector3Int tilePosition) : base(tilePosition)
+        {
+            this.startPosition = startPosition;
+        }
+        public override object Clone()
+        {
+            return new FillNode(startPosition, this.tilePosition);
+        }
+        public override float getCost()
+        {
+            return Vector3Int.Distance(this.startPosition, this.tilePosition);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.tilePosition.x * 1000000 + tilePosition.y;
+        }
+    }
+
+    private void fill(Tile selectedTile, Tilemap tilemap, Vector3Int position)
+    {
+        AVL avl = new AVL();
+        Dictionary<Vector3Int, string> checkedPositions = new Dictionary<Vector3Int, string>();
+        Dictionary<Vector3Int, string> checkPositions = new Dictionary<Vector3Int, string>();
+
+        FillNode startFillNode = new FillNode(position, position);
+        checkPositions.Add(position,"");
+        avl.Add(startFillNode);
+
+        Tile clickedTile = (Tile)tilemap.GetTile(position);
+
+        int counter = 0;
+        int maxCounter = 100000;
+        while(!avl.isEmpty() && checkPositions.Count > 0 && counter < maxCounter)
+        {
+            FillNode currentfillNode = (FillNode)avl.PopMinValue();
+            checkPositions.Remove(currentfillNode.tilePosition);
+
+            checkedPositions.Add(currentfillNode.tilePosition, "");
+            tilemap.SetTile(currentfillNode.tilePosition, selectedTile);
+
+            List<Vector3Int> neighbors = getNeighbours(clickedTile, tilemap, currentfillNode.tilePosition);
+            foreach(Vector3Int neighbor in neighbors)
+            {
+                if (!checkedPositions.ContainsKey(neighbor) && !checkPositions.ContainsKey(neighbor))
+                {
+                    FillNode fillNode = new FillNode(position, neighbor);
+                    checkPositions.Add(neighbor, "");
+                    avl.Add(fillNode);
+                }
+            }
+
+            counter++;
+        }
+    }
+
+    private List<Vector3Int> getNeighbours(Tile tile, Tilemap tilemap, Vector3Int position)
+    {
+        List<Vector3Int> neighbours = new List<Vector3Int>() { 
+            new Vector3Int(position.x+1,position.y,position.z),
+            new Vector3Int(position.x-1, position.y, position.z),
+            new Vector3Int(position.x, position.y+1, position.z),
+            new Vector3Int(position.x,position.y-1,position.z)};
+
+        List<Vector3Int> result = new List<Vector3Int>();
+        foreach (Vector3Int neighbor in neighbours)
+        {
+            Tile neighborTile = (Tile)tilemap.GetTile(neighbor);
+            if (neighborTile == tile)
+            {
+                result.Add(neighbor);
+            }
+        }
+        return result;
+    }
+
+    private void drawingRectangleState()
+    {
+        if (EventSystem.current.IsPointerOverGameObject()) return;
+
+        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePosition.z = 0;
+        Vector3Int mousePositionInt = Vector3Int.FloorToInt(mousePosition);
+
+        createSelectingGrid(mousePositionInt);
+        createPreviewPoint(mousePositionInt);
+
+        // Check if exit state
+        if (Input.GetMouseButtonDown(1))
+        {
+            toBuildTileState();
+        }
+
+        // Store start point
+        if (Input.GetMouseButtonDown(0))
+        {
+            this.startSelectingPoint = Vector2Int.FloorToInt(mousePosition);
+        }
+
+        // While holding create preview
+        if (Input.GetMouseButton(0))
+        {
+            createPreviewRectangle(this.startSelectingPoint, mousePosition);
+        }
+
+        // When released store end point and draw result
+        if (Input.GetMouseButtonUp(0))
+        {
+            this.endSelectingPoint = Vector2Int.FloorToInt(mousePosition);
+            drawRectangle(this.startSelectingPoint, this.endSelectingPoint, this.selectedTileMap, this.selectedTile, false);
+        }
+    }
+    private void drawingLineState()
+    {
+        if (EventSystem.current.IsPointerOverGameObject()) return;
+
+        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePosition.z = 0;
+        Vector3Int mousePositionInt = Vector3Int.FloorToInt(mousePosition);
+
+        createSelectingGrid(mousePositionInt);
+        createPreviewPoint(mousePositionInt);
+
+        // Check if exit state
+        if (Input.GetMouseButtonDown(1))
+        {
+            toBuildTileState();
+        }
+
+        // Store start point
+        if (Input.GetMouseButtonDown(0))
+        {
+            this.startSelectingPoint = Vector2Int.FloorToInt(mousePosition);
+        }
+        
+        // While holding create preview
+        if (Input.GetMouseButton(0))
+        {
+            createPreviewLine(this.startSelectingPoint, mousePosition);
+        }
+
+        // When released store end point and draw result
+        if (Input.GetMouseButtonUp(0))
+        {
+            this.endSelectingPoint = Vector2Int.FloorToInt(mousePosition);
+            drawLine(this.startSelectingPoint, this.endSelectingPoint, this.selectedTileMap, this.selectedTile, false);
+        }
+    }
+
+    private void createPreviewPoint(Vector3Int mousePositionInt)
+    {
+        if(this.selectedTile == null)
+        {
+            setTileFull(mousePositionInt, this.emptyTilePreview, this.previewTilemap, true);
+        }
+        else
+        {
+            setTileFull(mousePositionInt, this.selectedTile, this.previewTilemap, true);
+        }
+    }
+    private void createPreviewLine(Vector2 start, Vector2 finish)
+    {
+        if (this.selectedTile == null)
+        {
+            drawLine(start, finish, this.previewTilemap, this.emptyTilePreview, true);
+        }
+        else
+        {
+            drawLine(start, finish, this.previewTilemap, this.selectedTile, true);
+        }
+    }
+    private void createPreviewRectangle(Vector2 start, Vector2 finish)
+    {
+        if (this.selectedTile == null)
+        {
+            drawRectangle(start, finish, this.previewTilemap, this.emptyTilePreview, true);
+        }
+        else
+        {
+            drawRectangle(start, finish, this.previewTilemap, this.selectedTile, true);
+        }
+    }
+
+    private void drawRectangle(Vector2 s, Vector2 f, Tilemap tilemap, Tile tile, bool clear)
+    {
+        if (clear) tilemap.ClearAllTiles();
+
+        Vector3 s3 = new Vector3(s.x, s.y, 0);
+        Vector3 f3 = new Vector3(f.x, f.y, 0);
+
+        Vector3Int start = Vector3Int.FloorToInt(s3);
+        Vector3Int finish = Vector3Int.FloorToInt(f3);
+
+        int minY = Mathf.Min(start.y, finish.y);
+        int maxY = Mathf.Max(start.y, finish.y);
+        int minX = Mathf.Min(start.x, finish.x);
+        int maxX = Mathf.Max(start.x, finish.x);
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            setTileFull(new Vector3Int(x, minY, 0), tile, tilemap, false);
+            setTileFull(new Vector3Int(x, maxY, 0), tile, tilemap, false);
+        }
+        for (int y = minY; y <= maxY; y++)
+        {
+            setTileFull(new Vector3Int(minX, y, 0), tile, tilemap, false);
+            setTileFull(new Vector3Int(maxX, y, 0), tile, tilemap, false);
+        }
+    }
+    private void drawLine(Vector2 s, Vector2 f, Tilemap tilemap, Tile tile, bool clear)
+    {
+        if (clear) tilemap.ClearAllTiles();
+
+        Vector3 s3 = new Vector3(s.x, s.y, 0);
+        Vector3 f3 = new Vector3(f.x, f.y, 0);
+
+        Vector3Int start = Vector3Int.FloorToInt(s3);
+        Vector3Int finish = Vector3Int.FloorToInt(f3);
+
+        // Vertical line
+        if (finish.x == start.x)
+        {
+            int minY = Mathf.Min(start.y, finish.y);
+            int maxY = Mathf.Max(start.y, finish.y);
+            for (int y = minY; y <= maxY; y++)
+            {
+                Vector3Int position = new Vector3Int(finish.x, y, 0);
+                setTileFull(position, tile, tilemap, false);
+            }
+        }
+
+        // Horizontal line
+        else if (finish.y == start.y)
+        {
+            int minX = Mathf.Min(start.x, finish.x);
+            int maxX = Mathf.Max(start.x, finish.x);
+            for (int x = minX; x <= maxX; x++)
+            {
+                Vector3Int position = new Vector3Int(x, finish.y, 0);
+                setTileFull(position, tile, tilemap, false);
+            }
+        }
+
+        else
+        {
+            // Calculating rico
+            float rico = ((float)(finish.y - start.y)) / (finish.x - start.x);
+
+            // y = (rico * (x - start.x)) + start.y
+
+            int minX = Mathf.Min(start.x, finish.x);
+            int maxX = Mathf.Max(start.x, finish.x);
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                int y = (int)((rico * (x - start.x)) + start.y);
+                Vector3Int position = new Vector3Int(x, y, 0);
+                setTileFull(position, tile, tilemap, false);
+            }
+
+            int minY = Mathf.Min(start.y, finish.y);
+            int maxY = Mathf.Max(start.y, finish.y);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                int x = (int)(((y - start.y) / rico) + start.x);
+
+                Vector3Int position = new Vector3Int(x, y, 0);
+                setTileFull(position, tile, tilemap, false);
+            }
         }
     }
 
@@ -231,7 +538,7 @@ public class CreateLevelManager : MonoBehaviour
         Vector3Int mousePositionInt = Vector3Int.FloorToInt(mousePosition);
 
         createSelectingGrid(mousePositionInt);
-        setTileFull(mousePositionInt, this.selectedTile, this.previewTilemap, true);
+        createPreviewPoint(mousePositionInt);
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
@@ -536,7 +843,7 @@ public class CreateLevelManager : MonoBehaviour
     /// </summary>
     private void resetUi()
     {
-        foreach (Transform uiElement in this.canvas.GetComponentInChildren<Transform>())
+        foreach (Transform uiElement in this.normalUi.GetComponentInChildren<Transform>())
         {
             if (uiElement.name != "BasicUi" && uiElement.name != "QuickSelectButtons")
             {
@@ -553,9 +860,8 @@ public class CreateLevelManager : MonoBehaviour
     private void resetInfoPanel()
     {
         this.buildingStateInfo.text = "";
-        this.selectedTileText.text = "";
-        this.selectedTilemapText.text = "";
-        this.selectedGameObjectText.text = "";
+        this.firstLine.text = "";
+        this.secondLine.text = "";
     }
 
     /// <summary>
@@ -650,11 +956,11 @@ public class CreateLevelManager : MonoBehaviour
 
         if(tile == null)
         {
-            this.selectedTileText.text = "Erasing Tiles";
+            this.firstLine.text = "Erasing Tiles";
         }
         else
         {
-            this.selectedTileText.text = "Tile: " + tile.name;
+            this.firstLine.text = "Tile: " + tile.name;
         }
     }
 
@@ -668,11 +974,11 @@ public class CreateLevelManager : MonoBehaviour
 
         if(gameObject == null)
         {
-            this.selectedGameObjectText.text = "Erasing GameObjects";
+            this.firstLine.text = "Erasing GameObjects";
         }
         else
         {
-            this.selectedGameObjectText.text = "GameObject: " + gameObject.name;
+            this.firstLine.text = "GameObject: " + gameObject.name;
         }
     }
 
@@ -682,7 +988,7 @@ public class CreateLevelManager : MonoBehaviour
     public void selectFloor()
     {
         this.selectedTileMap = floorTilemap;
-        this.selectedTilemapText.text = "Tilemap: " + floorTilemap.name;
+        this.secondLine.text = "Tilemap: " + floorTilemap.name;
     }
 
     /// <summary>
@@ -691,7 +997,7 @@ public class CreateLevelManager : MonoBehaviour
     public void selectWalls()
     {
         this.selectedTileMap = wallsTilemap;
-        this.selectedTilemapText.text = "Tilemap: " + wallsTilemap.name;
+        this.secondLine.text = "Tilemap: " + wallsTilemap.name;
     }
 
     /// <summary>
@@ -700,7 +1006,7 @@ public class CreateLevelManager : MonoBehaviour
     public void selectDecoration()
     {
         this.selectedTileMap = decorationTilemap;
-        this.selectedTilemapText.text = "Tilemap: " + decorationTilemap.name;
+        this.secondLine.text = "Tilemap: " + decorationTilemap.name;
     }
 
     /// <summary>
@@ -708,7 +1014,7 @@ public class CreateLevelManager : MonoBehaviour
     /// </summary>
     public void selectErasor()
     {
-        if(buildingState == BuildingState.BuildingTiles)
+        if(buildingState == BuildingState.BuildingTiles || buildingState == BuildingState.DrawingRectangle || buildingState == BuildingState.DrawingLine)
         {
             setTile(null);
         }
@@ -741,14 +1047,80 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
-    public void toBuildTileState()
+    private void selectTilemap(Tilemap tilemap)
     {
-        resetInfoPanel();
-        resetSelected();
+        this.selectedTileMap = tilemap;
+
+        if (tilemap == null)
+        {
+            this.secondLine.text = "No tilemap selected";
+        }
+        else
+        {
+            this.secondLine.text = "Tilemap: " + tilemap.name;
+        }
+    }
+
+    public void toFillState()
+    {
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
+
+        this.setTile(this.selectedTile);
+        this.selectTilemap(this.selectedTileMap);
+
         resetUi();
 
-        setTile(null);
-        selectFloor();
+        this.buildingTilesUi.SetActive(true);
+        this.infoPanel.SetActive(true);
+
+        this.buildingState = BuildingState.Fill;
+        this.buildingStateInfo.text = "Filling Space";
+    }
+
+    public void toDrawLineState()
+    {
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
+
+        this.setTile(this.selectedTile);
+        this.selectTilemap(this.selectedTileMap);
+
+        resetUi();
+
+        this.buildingTilesUi.SetActive(true);
+        this.infoPanel.SetActive(true);
+
+        this.buildingState = BuildingState.DrawingLine;
+        this.buildingStateInfo.text = "Drawing Line";
+    }
+
+    public void toDrawRectangleState()
+    {
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
+
+        this.setTile(this.selectedTile);
+        this.selectTilemap(this.selectedTileMap);
+
+        resetUi();
+
+        this.buildingTilesUi.SetActive(true);
+        this.infoPanel.SetActive(true);
+
+        this.buildingState = BuildingState.DrawingRectangle;
+        this.buildingStateInfo.text = "Drawing Rectangle";
+    }
+
+    public void toBuildTileState()
+    {
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
+
+        this.setTile(this.selectedTile);
+        this.selectTilemap(this.selectedTileMap);
+
+        resetUi();
 
         this.buildingTilesUi.SetActive(true);
         this.infoPanel.SetActive(true);
@@ -759,9 +1131,12 @@ public class CreateLevelManager : MonoBehaviour
 
     public void toBuildGameObjectState()
     {
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
+
         resetInfoPanel();
-        resetSelected();
         resetUi();
+
         this.buildingGameObjectsUi.SetActive(true);
         this.infoPanel.SetActive(true);
 
@@ -794,6 +1169,9 @@ public class CreateLevelManager : MonoBehaviour
 
     public void toPasteState()
     {
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
+
         this.resetUi();
 
         this.buildingState = BuildingState.Paste;

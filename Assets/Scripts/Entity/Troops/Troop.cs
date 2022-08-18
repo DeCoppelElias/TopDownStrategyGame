@@ -46,8 +46,8 @@ public abstract class Troop : AttackingEntity
         if (!isServer) return;
 
         Vector3 scale = new Vector3((viewRange * 2) + 1, (viewRange * 2) + 1, 0);
-        this.detectRingOpacity = 0.2f;
         this.detectRingScale = scale;
+        this.detectRingOpacity = 0.2f;
 
         decorationCollisions = GameObject.Find("Decoration").GetComponent<DecorationCollisions>();
     }
@@ -67,7 +67,7 @@ public abstract class Troop : AttackingEntity
         }
         if (_currentEntityState.Equals(EntityState.Attacking))
         {
-            attackTarget();
+            attackingState();
         }
     }
 
@@ -76,6 +76,8 @@ public abstract class Troop : AttackingEntity
         if (this == null) return;
         if (_path.Count > 0)
         {
+            turnTo(_path[0]);
+
             Vector2 currentPosition = transform.position;
             if (Vector2.Distance(currentPosition, _path[0]) < 0.3)
             {
@@ -104,12 +106,70 @@ public abstract class Troop : AttackingEntity
         }
     }
 
+    private void rotateTo(Vector3 targetLocation)
+    {
+        Vector3 myLocation = transform.position;
+        targetLocation.z = myLocation.z;
+
+        // vector from this object towards the target location
+        Vector3 vectorToTarget = targetLocation - myLocation;
+        Vector3 rotatedVectorToTarget = Quaternion.Euler(0, 0, -90) * vectorToTarget;
+
+        if (vectorToTarget.x > 0)
+        {
+            Vector3 scale = transform.localScale;
+            scale.y = -1;
+            transform.localScale = scale;
+        }
+
+        // get the rotation that points the Z axis forward, and the Y axis 90 degrees away from the target
+        // (resulting in the X axis facing the target)
+        Quaternion targetRotation = Quaternion.LookRotation(forward: Vector3.forward, upwards: rotatedVectorToTarget);
+
+        // changed this from a lerp to a RotateTowards because you were supplying a "speed" not an interpolation value
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 100 * Time.deltaTime);
+    }
+
+    private void turnTo(Vector3 targetLocation)
+    {
+        Vector3 myLocation = this.transform.position;
+        Vector3 vectorToTarget = targetLocation - myLocation;
+        if (vectorToTarget.x > 0)
+        {
+            Vector3 scale = transform.localScale;
+            scale.x = -1;
+            transform.localScale = scale;
+        }
+        else
+        {
+            Vector3 scale = transform.localScale;
+            scale.x = 1;
+            transform.localScale = scale;
+        }
+    }
+
     private void walkingToTargetState()
     {
         if (_currentTarget != null && _currentTarget.Owner != this.Owner)
         {
+            turnTo(_currentTarget.transform.position);
+
             var step = _speed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(this.transform.position, _currentTarget.transform.position, step);
+        }
+        else
+        {
+            _currentTarget = null;
+            this._currentEntityState = EntityState.Normal;
+        }
+    }
+
+    private void attackingState()
+    {
+        if (_currentTarget != null && _currentTarget.Owner != this.Owner)
+        {
+            turnTo(_currentTarget.transform.position);
+            attackTarget();
         }
         else
         {
@@ -165,6 +225,12 @@ public abstract class Troop : AttackingEntity
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 1f;
         this.globalVisibility = true;
+
+        Animator animator = this.GetComponent<Animator>();
+        if(animator != null)
+        {
+            animator.SetBool("Attacking", true);
+        }
     }
 
     protected override void toWalkingToTargetState()
@@ -181,6 +247,12 @@ public abstract class Troop : AttackingEntity
         else
         {
             this.globalVisibility = true;
+        }
+
+        Animator animator = this.GetComponent<Animator>();
+        if (animator != null)
+        {
+            animator.SetBool("Attacking", false);
         }
     }
 
@@ -199,6 +271,12 @@ public abstract class Troop : AttackingEntity
         else
         {
             this.globalVisibility = true;
+        }
+
+        Animator animator = this.GetComponent<Animator>();
+        if (animator != null)
+        {
+            animator.SetBool("Attacking", false);
         }
     }
     /// <summary>
@@ -415,12 +493,19 @@ public abstract class Troop : AttackingEntity
 
     public void onDetectRingChangeOpacity(float oldOpacity, float newOpacity)
     {
-        Invoke("updateDetectRingOpacity", 0.1f);
+        GameObject detectRing = this.transform.Find("DetectRing").gameObject;
+        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null) return;
+
+        Color alphaColor = spriteRenderer.color;
+        alphaColor.a = newOpacity;
+        spriteRenderer.color = alphaColor;
     }
 
     public void onDetectRingChangeScale(Vector3 oldScale, Vector3 newScale)
     {
-        Invoke("updateDetectRingScale", 0.1f);
+        GameObject detectRing = this.transform.Find("DetectRing").gameObject;
+        detectRing.transform.localScale = newScale;
     }
 
     public void onEnterDecoration()
@@ -449,16 +534,6 @@ public abstract class Troop : AttackingEntity
                 child.enabled = newVisibility;
             }
         }
-    }
-
-    private void updateDetectRingOpacity()
-    {
-        this.ServerClient.updateDetectRingOfGameObject(this.gameObject, this.detectRingOpacity);
-    }
-
-    private void updateDetectRingScale()
-    {
-        this.ServerClient.updateDetectRingOfGameObject(this.gameObject, this.detectRingScale);
     }
 
     private void onChangeVisibility(bool oldVisibility, bool newVisibility)

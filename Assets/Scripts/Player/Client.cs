@@ -362,54 +362,6 @@ public class Client : Player
         return this.castle.transform.position;
     }
 
-    [Client]
-    public void updateAttackRingOfGameObject(GameObject gameObject, float alpha)
-    {
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("AttackRing") == null) return;
-        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
-        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        Color alphaColor = spriteRenderer.color;
-        alphaColor.a = alpha;
-        spriteRenderer.color = alphaColor;
-    }
-
-    [Client]
-    public void updateAttackRingOfGameObject(GameObject gameObject, Vector3 scale)
-    {
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("AttackRing") == null) return;
-        GameObject attackRing = gameObject.transform.Find("AttackRing").gameObject;
-        SpriteRenderer spriteRenderer = attackRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        attackRing.transform.localScale = scale;
-    }
-
-    [Client]
-    public void updateDetectRingOfGameObject(GameObject gameObject, float alpha)
-    {
-        if (gameObject == null) return;
-        if (gameObject.transform.Find("DetectRing") == null) return;
-        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
-        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        Color alphaColor = spriteRenderer.color;
-        alphaColor.a = alpha;
-        spriteRenderer.color = alphaColor;
-    }
-
-    [Client]
-    public void updateDetectRingOfGameObject(GameObject gameObject, Vector3 scale)
-    {
-        if (gameObject == null) return;
-        GameObject detectRing = gameObject.transform.Find("DetectRing").gameObject;
-        if (detectRing == null) return;
-        SpriteRenderer spriteRenderer = detectRing.GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null) return;
-        detectRing.transform.localScale = scale;
-    }
-
     /// <summary>
     /// This method will do the necessary server updates when a client is disconnected
     /// </summary>

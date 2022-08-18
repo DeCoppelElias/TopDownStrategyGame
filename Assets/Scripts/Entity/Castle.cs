@@ -473,9 +473,9 @@ public class Castle : AttackingEntity
         if (newOwner == null)
         {
             this.gameObject.name = "EmptyCastle";
-            float r = 255;  // red component
-            float g = 255;  // green component
-            float b = 255;  // blue component
+            float r = 0;  // red component
+            float g = 0;  // green component
+            float b = 0;  // blue component
             float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
             float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
@@ -495,9 +495,9 @@ public class Castle : AttackingEntity
         else if (newOwner is AiClient)
         {
             this.gameObject.name = "AiCastle";
-            float r = 95;  // red component
-            float g = 95;  // green component
-            float b = 95;  // blue component
+            float r = 255;  // red component
+            float g = 255;  // green component
+            float b = 255;  // blue component
             float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
             float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
@@ -507,8 +507,8 @@ public class Castle : AttackingEntity
         {
             this.gameObject.name = "EnemyCastle";
             float r = 255;  // red component
-            float g = 95;  // green component
-            float b = 95;  // blue component
+            float g = 143;  // green component
+            float b = 143;  // blue component
             float mainOpacity = this.gameObject.GetComponent<SpriteRenderer>().color.a;
             float childOpacity = this.transform.GetChild(0).GetComponent<SpriteRenderer>().color.a;
             this.gameObject.GetComponent<SpriteRenderer>().color = new Color(r / 255, g / 255, b / 255, mainOpacity);
