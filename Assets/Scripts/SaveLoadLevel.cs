@@ -39,8 +39,11 @@ public class SaveLoadLevel : NetworkBehaviour
     {
         normalUi = GameObject.Find("NormalUi");
         savingLevelUi = GameObject.Find("SavingLevelUi");
-        savingLevelUi.SetActive(false);
-        savingLevelInfo = savingLevelUi.transform.Find("SavingLevelInfo").GetComponent<TMP_Text>();
+        if(savingLevelUi != null)
+        {
+            savingLevelUi.SetActive(false);
+            savingLevelInfo = savingLevelUi.transform.Find("SavingLevelInfo").GetComponent<TMP_Text>();
+        }
 
         floorTilemap = GameObject.Find("Ground").GetComponent<Tilemap>();
         wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
@@ -51,6 +54,10 @@ public class SaveLoadLevel : NetworkBehaviour
         StartCoroutine(saveLevelStep());
     }
 
+    /// <summary>
+    /// Will save in an amount of steps
+    /// </summary>
+    /// <returns></returns>
     private IEnumerator saveLevelStep()
     {
         if (saving && Time.time - lastSavingStep > savingCooldown)
@@ -229,6 +236,9 @@ public class SaveLoadLevel : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Will reset Ui to normal
+    /// </summary>
     public void resetUi()
     {
         normalUi.SetActive(true);
@@ -236,6 +246,10 @@ public class SaveLoadLevel : NetworkBehaviour
         savingLevelInfo.text = "";
     }
     
+    /// <summary>
+    /// Will save level
+    /// </summary>
+    /// <param name="levelName"></param>
     public void saveLevel(string levelName)
     {
         normalUi.SetActive(false);
@@ -245,6 +259,10 @@ public class SaveLoadLevel : NetworkBehaviour
         writer = new StreamWriter(Application.persistentDataPath + "/Levels/" + levelName + ".txt", false);
     }
 
+    /// <summary>
+    /// Will load level
+    /// </summary>
+    /// <param name="levelName"></param>
     public void loadLevel(string levelName)
     {
         string levelInfoString = getLevelInfoString(levelName);
@@ -253,13 +271,11 @@ public class SaveLoadLevel : NetworkBehaviour
 
         loadLevel(lines);
     }
-
     public void loadLevel()
     {
         string levelName = inputField.text;
         loadLevel(levelName);
     }
-
     public void loadLevel(string[] lines)
     {
         // Castles
@@ -315,10 +331,14 @@ public class SaveLoadLevel : NetworkBehaviour
         }
 
         // Building a wall around the map
-        Tile wallTile = getTile("WallTile");
+        Tile wallTile = getTile("Wall Tile");
         buildLevelEdgeWall(wallTile);
     }
 
+    /// <summary>
+    /// Will load all server gameobjects of level
+    /// </summary>
+    /// <param name="levelName"></param>
     public void loadLevelServer(string levelName)
     {
         string s = getLevelInfoString(levelName).Replace("\r", "");
@@ -352,6 +372,11 @@ public class SaveLoadLevel : NetworkBehaviour
             NetworkServer.Spawn(castle);
         }
     }
+
+    /// <summary>
+    /// Will load all tiles and set camera
+    /// </summary>
+    /// <param name="levelInfo"></param>
     public void loadLevelClient(string levelInfo)
     {
         string s = levelInfo.Replace("\r", "");
@@ -386,10 +411,21 @@ public class SaveLoadLevel : NetworkBehaviour
         }
 
         // Building a wall around the map
-        Tile wallTile = getTile("WallTile");
+        Tile wallTile = getTile("Wall Tile");
         buildLevelEdgeWall(wallTile);
+
+        CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
+        if (cameraMovement)
+        {
+            cameraMovement.setupCameraBounds();
+        }
     }
 
+    /// <summary>
+    /// Gets a string representing the level
+    /// </summary>
+    /// <param name="levelName"></param>
+    /// <returns></returns>
     public string getLevelInfoString(string levelName)
     {
         try
@@ -406,6 +442,11 @@ public class SaveLoadLevel : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a dict that stores info of the level
+    /// </summary>
+    /// <param name="levelName"></param>
+    /// <returns></returns>
     public Dictionary<Tilemap, (Tile, Vector3Int)> getLevelInfoClient(string levelName)
     {
         Dictionary<Tilemap, (Tile, Vector3Int)> result = new Dictionary<Tilemap, (Tile, Vector3Int)>();
@@ -458,6 +499,10 @@ public class SaveLoadLevel : NetworkBehaviour
         return result;
     }
 
+    /// <summary>
+    /// Builds a wall around the edges of the level
+    /// </summary>
+    /// <param name="wallTile"></param>
     private void buildLevelEdgeWall(Tile wallTile)
     {
         (Vector2, Vector2) tuple = findBorders();
@@ -475,6 +520,11 @@ public class SaveLoadLevel : NetworkBehaviour
             wallTilemap.SetTile(new Vector3Int((int)topRight.x, y, 0), wallTile);
         }
     }
+
+    /// <summary>
+    /// Finds the borders of the level by checking the floor, wall and decoration tilemap
+    /// </summary>
+    /// <returns></returns>
     private (Vector2,Vector2) findBorders()
     {
         Vector2 wallBottomLeft = wallTilemap.localBounds.center - wallTilemap.localBounds.extents;
@@ -493,17 +543,27 @@ public class SaveLoadLevel : NetworkBehaviour
         int maxY = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
 
         Vector2 bottomLeft = new Vector2(minX - 1, minY - 1);
-        Vector2 topRight = new Vector2(maxX + 1, maxY + 1);
+        Vector2 topRight = new Vector2(maxX, maxY);
 
         return (bottomLeft, topRight);
     }
 
+    /// <summary>
+    /// Spawns a tile
+    /// </summary>
+    /// <param name="tileString"></param>
+    /// <param name="tilemap"></param>
     private void spawnTile(string tileString, Tilemap tilemap)
     {
         (Tile, Vector3Int) tuple = translateTileString(tileString);
         tilemap.SetTile(tuple.Item2, tuple.Item1);
     }
 
+    /// <summary>
+    /// Translates a tilestring to a tile and position
+    /// </summary>
+    /// <param name="tileString"></param>
+    /// <returns></returns>
     private (Tile, Vector3Int) translateTileString(string tileString)
     {
         if (tileString == "") throw new Exception("Not a valid tileString");
@@ -530,11 +590,19 @@ public class SaveLoadLevel : NetworkBehaviour
         return (tile, tilePosition);
     }
 
+    /// <summary>
+    /// Gets a tile from resources
+    /// </summary>
+    /// <param name="tileName"></param>
+    /// <returns></returns>
     private Tile getTile(string tileName)
     {
         return (Tile)Resources.Load("Tiles/BuildableTiles/" + tileName);
     }
 
+    /// <summary>
+    /// Deletes all castles
+    /// </summary>
     private void deleteCastles()
     {
         GameObject castles = GameObject.Find("Castles");

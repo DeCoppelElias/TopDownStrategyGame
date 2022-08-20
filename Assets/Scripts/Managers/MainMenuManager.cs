@@ -68,7 +68,7 @@ public class MainMenuManager : MonoBehaviour
         if (localClient == null) return;
 
         // Spawning Castles
-        GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
+        GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/BuildablePrefabs/PlayerCastle");
         GameObject castleContainer = GameObject.Find("Castles");
 
         // Setting up first castle

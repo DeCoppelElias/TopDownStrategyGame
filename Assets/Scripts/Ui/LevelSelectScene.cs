@@ -22,7 +22,6 @@ public class LevelSelectScene : NetworkBehaviour
     private void Start()
     {
         selectLevelUi = GameObject.Find("LevelScrollViews");
-        selectLevelUi.SetActive(false);
         networkManager = GameObject.Find("NetworkManager").GetComponent<NetworkManager>();
 
         amountOfClientsText = GameObject.Find("ClientAmount").GetComponent<TMP_Text>();
@@ -47,9 +46,10 @@ public class LevelSelectScene : NetworkBehaviour
         networkManager.ServerChangeScene("Level");
     }
 
-    public void activateSelectLevelUi()
+    public void activateSelectLevelUi(bool active)
     {
-        selectLevelUi.SetActive(true);
+        if (selectLevelUi == null) return;
+        selectLevelUi.SetActive(active);
     }
 
     public void leaveGame()

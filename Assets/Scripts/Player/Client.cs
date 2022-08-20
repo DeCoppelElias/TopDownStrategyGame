@@ -35,12 +35,7 @@ public class Client : Player
 
         if (SceneManager.GetActiveScene().name == "LevelSelectScene")
         {
-            LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
-            levelSelectSceneSceneUi.setClient(this);
-            if (isServer)
-            {
-                levelSelectSceneSceneUi.activateSelectLevelUi();
-            }
+            levelSelectSceneSetup();
         }
 
         else if (SceneManager.GetActiveScene().name == "Level")
@@ -65,6 +60,20 @@ public class Client : Player
         }
     }
 
+    private void levelSelectSceneSetup()
+    {
+        LevelSelectScene levelSelectSceneSceneUi = GameObject.Find("Canvas").GetComponent<LevelSelectScene>();
+        levelSelectSceneSceneUi.setClient(this);
+        if (isServer)
+        {
+            levelSelectSceneSceneUi.activateSelectLevelUi(true);
+        }
+        else
+        {
+            levelSelectSceneSceneUi.activateSelectLevelUi(false);
+        }
+    }
+
     [TargetRpc]
     public void clientSetup(NetworkConnection target)
     {
@@ -83,6 +92,8 @@ public class Client : Player
             findServerClient();
 
             findCastleForClient();
+
+            Camera.main.transform.position = this.castle.transform.position + new Vector3(0,0,-10);
 
             Invoke("clientSetupDone", 0.5f);
         }

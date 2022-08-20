@@ -263,35 +263,36 @@ public class PathFinding : MonoBehaviour
         while(counter < 1)
         {
             (Vector2, Vector2) tuple = getMinAndMax(shortestPath);
-            int minWidth = (int)tuple.Item1.x;
-            int maxWidth = (int)tuple.Item2.x;
-            int widthDif = maxWidth - minWidth;
+            int minX = (int)tuple.Item1.x;
+            int maxX = (int)tuple.Item2.x;
+            int widthDif = maxX - minX;
             if (widthDif < 10)
             {
-                minWidth -= 10;
-                maxWidth += 10;
+                minX -= 10;
+                maxX += 10;
             }
             else if (widthDif > 20)
             {
-                minWidth += widthDif/5;
-                maxWidth -= widthDif/5;
+                minX += widthDif/5;
+                maxX -= widthDif/5;
             }
 
-            int minHeight = (int)tuple.Item1.y;
-            int maxHeight = (int)tuple.Item2.y;
-            int heightDif = maxHeight - minHeight;
+            int minY = (int)tuple.Item1.y;
+            int maxY = (int)tuple.Item2.y;
+            int heightDif = maxY - minY;
             if (heightDif < 10)
             {
-                minHeight -= 10;
-                maxHeight += 10;
+                minY -= 10;
+                maxY += 10;
             }
             else if (heightDif > 20)
             {
-                minHeight += widthDif / 5;
-                maxHeight -= widthDif / 5;
+                minY += widthDif / 5;
+                maxY -= widthDif / 5;
             }
 
-            Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesMiddle(1f, minWidth, maxWidth, minHeight, maxHeight);
+            /*Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesMiddle(1f, minX, maxX, minY, maxY);*/
+            Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesPath(shortestPath, 3, 10, 0.7f);
 
             // Find path with added obstacles
             List<Vector2> path = findShortestPath(start, finish, virtualObstacles);
@@ -314,7 +315,7 @@ public class PathFinding : MonoBehaviour
         // Returning the shortest path
         return shortestPath;
     }
-    private Dictionary<Vector3Int, string> generateVirtualObstaclesEven(float chance, int minWidth, int maxWidth, int minHeight, int maxHeight, bool display = false)
+    private Dictionary<Vector3Int, string> generateVirtualObstaclesEven(float chance, int minX, int maxX, int minY, int maxY, bool display = false)
     {
         // Chance must be between 0 and 1
         chance = Mathf.Clamp(chance, 0, 1);
@@ -326,9 +327,9 @@ public class PathFinding : MonoBehaviour
         if (display) displayTilemap.ClearAllTiles();
 
         // Placing virtual obstacles
-        for (int width = minWidth; width < maxWidth; width++)
+        for (int width = minX; width < maxX; width++)
         {
-            for (int height = minHeight; height < maxHeight; height++)
+            for (int height = minY; height < maxY; height++)
             {
                 Vector3Int tilePosition = new Vector3Int(width, height, 0);
                 float random = UnityEngine.Random.Range(0f, 1f);
@@ -342,7 +343,33 @@ public class PathFinding : MonoBehaviour
         }
         return virtualObstacles;
     }
-    private Dictionary<Vector3Int, string> generateVirtualObstaclesMiddle(float chance, int minWidth, int maxWidth, int minHeight, int maxHeight, bool display = false)
+
+    private Dictionary<Vector3Int, string> generateVirtualObstaclesPath(List<Vector2> path, int size, int frequency, float chance, bool display = false, bool clear = true)
+    {
+        if (frequency == 0) return null;
+        if (clear) this.displayTilemap.ClearAllTiles();
+        int counter = 0;
+        Dictionary<Vector3Int, string> result = new Dictionary<Vector3Int, string>();
+        foreach (Vector2 position in path)
+        {
+            if(counter == frequency)
+            {
+                Dictionary<Vector3Int, string> virtualObstacles = generateVirtualObstaclesMiddle(chance, (int)position.x - size, (int)position.x + size, (int)position.y - size, (int)position.y + size, display, false);
+                foreach (KeyValuePair<Vector3Int, string> obstacle in virtualObstacles)
+                {
+                    result.TryAdd(obstacle.Key, obstacle.Value);
+                }
+                counter = 0;
+            }
+            else
+            {
+                counter++;
+            }
+        }
+
+        return result;
+    }
+    private Dictionary<Vector3Int, string> generateVirtualObstaclesMiddle(float chance, int minX, int maxX, int minY, int maxY, bool display = false, bool clear = true)
     {
         // Chance must be between 0 and 1
         chance = Mathf.Clamp(chance, 0, 1);
@@ -351,20 +378,22 @@ public class PathFinding : MonoBehaviour
         Dictionary<Vector3Int, string> virtualObstacles = new Dictionary<Vector3Int, string>();
 
         // Erase previous display
-        if (display) displayTilemap.ClearAllTiles();
+        if (clear) displayTilemap.ClearAllTiles();
+
+        // Storing width and height
+        float widthDist = (maxX - minX) / 2;
+        float heightDist = (maxY - minY) / 2;
 
         // Placing virtual obstacles
-        for (int width = minWidth; width < maxWidth; width++)
+        for (int width = minX; width < maxX; width++)
         {
-            for (int height = minHeight; height < maxHeight; height++)
+            for (int height = minY; height < maxY; height++)
             {
                 Vector3Int tilePosition = new Vector3Int(width, height, 0);
 
                 // Calculating local chance, the chance gets lower further away from the center
-                float widthDist = (maxWidth - minWidth) / 2;
-                float heightDist = (maxHeight - minHeight) / 2;
-                float currentWidthDist = Mathf.Abs(width - minWidth - widthDist);
-                float currentHeightDist = Mathf.Abs(height - minHeight - heightDist);
+                float currentWidthDist = Mathf.Abs(width - minX - widthDist);
+                float currentHeightDist = Mathf.Abs(height - minY - heightDist);
                 float percentage = (((currentWidthDist / widthDist) + (currentHeightDist / heightDist)) / 2);
 
                 float random = UnityEngine.Random.Range(0f, 1f);

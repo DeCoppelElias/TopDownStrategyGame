@@ -32,7 +32,7 @@ public class CameraMovement : MonoBehaviour
 
 
     [SerializeField]
-    private int moveSpeed = 10;
+    private int cameraMoveSpeed = 10;
 
     private float cameraMax_x = 0;
     private float cameraMax_y = 0;
@@ -42,15 +42,6 @@ public class CameraMovement : MonoBehaviour
     private Vector2 bottomLeft;
     private Vector2 topRight;
 
-    private Camera mainCamera;
-
-    void Start()
-    {
-        mainCamera = this.GetComponent<Camera>();
-        if(BoundedMovement) setCameraBounds();
-        targetZoom = maxZoom;
-    }
-
     void Update()
     {
         if (MovableCamera)
@@ -58,15 +49,31 @@ public class CameraMovement : MonoBehaviour
             moveCamera();
         }
 
-        if (!EventSystem.current.IsPointerOverGameObject() && ZoomableCamera)
+        if (ZoomableCamera)
         {
             zoomCamera();
         }
     }
 
+    /// <summary>
+    /// Will check current level and setup the camera bounds and max zoom
+    /// </summary>
+    public void setupCameraBounds()
+    {
+        if (BoundedMovement) setCameraBounds();
+        targetZoom = maxZoom;
+    }
+
+    /// <summary>
+    /// Handles moving the camera
+    /// </summary>
     private void moveCamera()
     {
-        int currentMoveSpeed = (int)(moveSpeed * (targetZoom / maxZoom));
+        // Move speed changes is lower when zoomed in
+        int currentMoveSpeed = cameraMoveSpeed;
+        if (BoundedZoom) currentMoveSpeed = (int)(currentMoveSpeed * (targetZoom / maxZoom));
+
+        // Get movement
         Vector3 movement = new Vector3(0, 0, 0);
         if (Input.GetKey(KeyCode.RightArrow))
         {
@@ -84,21 +91,41 @@ public class CameraMovement : MonoBehaviour
         {
             movement.y += currentMoveSpeed * Time.deltaTime;
         }
+
+        // Move Camera
         transform.Translate(movement);
+
+        // Clamp value when bounded
         if (BoundedMovement)
         {
             transform.position = new Vector3(Mathf.Clamp(transform.position.x, cameraMin_x, cameraMax_x), Mathf.Clamp(transform.position.y, cameraMin_y, cameraMax_y), transform.position.z);
         }
     }
 
+    /// <summary>
+    /// Handles zooming the camera
+    /// </summary>
     private void zoomCamera()
     {
+        // If over Ui element don't zoom
+        if (EventSystem.current.IsPointerOverGameObject()) return;
+
+        // Check if scrolling
         float scrollData = Input.GetAxis("Mouse ScrollWheel");
         targetZoom -= scrollData * zoomSpeed;
+
+        // If bounded, clamp value
         if(BoundedZoom) targetZoom = Mathf.Clamp(targetZoom, minZoom, maxZoom);
+        if (targetZoom < 0) targetZoom = 0;
+
+        // Change zoom
         setZoomSubtle(targetZoom);
     }
 
+    /// <summary>
+    /// Find borders by checking wall, floor and decoration tilemap
+    /// </summary>
+    /// <returns></returns>
     private (Vector2, Vector2) findBorders()
     {
         Tilemap wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
@@ -126,7 +153,10 @@ public class CameraMovement : MonoBehaviour
         return (bottomLeft, topRight);
     }
 
-    public void setCameraBounds()
+    /// <summary>
+    /// sets camera bounds
+    /// </summary>
+    private void setCameraBounds()
     {
         // Finding the edges of the level and setting bottomLeft and topRight
         (Vector2, Vector2) tuple = findBorders();
@@ -134,32 +164,39 @@ public class CameraMovement : MonoBehaviour
         this.topRight = tuple.Item2;
 
         createMaxZoom();
+        refreshCameraBounds();
     }
 
+    /// <summary>
+    /// Checks the current zoom and changes bounds based on that
+    /// </summary>
     public void refreshCameraBounds()
     {
         if (!BoundedMovement) return;
-        float vertExtent = mainCamera.orthographicSize;
+        float vertExtent = Camera.main.orthographicSize;
         float horzExtent = vertExtent * Screen.width / Screen.height;
         cameraMax_x = topRight.x - horzExtent;
         cameraMax_y = topRight.y - vertExtent;
         cameraMin_x = bottomLeft.x + horzExtent;
         cameraMin_y = bottomLeft.y + vertExtent;
-
-        if(cameraMax_x < cameraMin_x || cameraMax_y < cameraMin_y)
-        {
-            BoundedMovement = false;
-        }
     }
 
+    /// <summary>
+    /// Finds the max amound of zoom
+    /// </summary>
     private void createMaxZoom()
     {
         float distX = (this.topRight.x - this.bottomLeft.x) * 0.5f;
         float distY = (this.topRight.y - this.bottomLeft.y) * 0.5f;
         float dist = Mathf.Max(distX, distY);
-        setMaxZoom(dist * Screen.height / Screen.width);
+        float maxZoom = (dist * Screen.height / Screen.width) - 5;
+        setMaxZoom(maxZoom);
     }
 
+    /// <summary>
+    /// Sets max zoom
+    /// </summary>
+    /// <param name="zoom"></param>
     public void setMaxZoom(float zoom)
     {
         Camera.main.orthographicSize = zoom;
@@ -167,6 +204,10 @@ public class CameraMovement : MonoBehaviour
         refreshCameraBounds();
     }
 
+    /// <summary>
+    /// Will change the zoom sublte every frame
+    /// </summary>
+    /// <param name="zoom"></param>
     private void setZoomSubtle(float zoom)
     {
         targetZoom = zoom;
@@ -174,6 +215,10 @@ public class CameraMovement : MonoBehaviour
         refreshCameraBounds();
     }
 
+    /// <summary>
+    /// Will immedially set zoom
+    /// </summary>
+    /// <param name="zoom"></param>
     public void setZoom(float zoom)
     {
         targetZoom = zoom;

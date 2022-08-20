@@ -56,6 +56,11 @@ public class CreateLevelButtons : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Creates a clickable button that will load a level
+    /// </summary>
+    /// <param name="levelScrollView"></param>
+    /// <param name="allLevelData"></param>
     private void createLevelButtons(GameObject levelScrollView, Dictionary<string, string> allLevelData)
     {
         GameObject content = levelScrollView.transform.Find("Viewport").Find("Content").gameObject;

@@ -1,4 +1,6 @@
 ﻿using Mirror;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -51,8 +53,462 @@ public class CreateLevelManager : MonoBehaviour
     private TMP_Text secondLine;
     private GameObject buildingInfo;
 
-    // Storing building size
+    // List of actions while mouse button down
+    List<Action> mouseButtonDownActions = new List<Action>();
+
+    // Action Manager will store and handle actions
+    ActionManager actionManager;
+
+    // Undo and Redo count
+    private TMP_Text redoCountText;
+    private TMP_Text undoCountText;
+
+    private class NullKey
+    {
+        public override bool Equals(object obj)
+        {
+            if (obj is NullKey) return true;
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+    private class CustomDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>> where TKey : class
+    {
+        private class CustomIEnumerator : IEnumerator<KeyValuePair<TKey, TValue>>
+        {
+            public KeyValuePair<TKey, TValue>[] pairs;
+            int position = -1;
+
+            public CustomIEnumerator(KeyValuePair<TKey, TValue>[] pairs)
+            {
+                this.pairs = pairs;
+            }
+
+            object IEnumerator.Current
+            {
+                get
+                {
+                    return Current;
+                }
+            }
+            public KeyValuePair<TKey, TValue> Current
+            {
+                get
+                {
+                    try
+                    {
+                        return pairs[position];
+                    }
+                    catch (IndexOutOfRangeException)
+                    {
+                        throw new InvalidOperationException();
+                    }
+                }
+            }
+            public bool MoveNext()
+            {
+                position++;
+                return (position < pairs.Length);
+            }
+
+            public void Reset()
+            {
+                position = -1;
+            }
+
+            public void Dispose()
+            {
+                
+            }
+        }
+
+        private NullKey nullKey = new NullKey();
+
+        public Dictionary<object, TValue> dict;
+
+        public CustomDictionary()
+        {
+            this.dict = new Dictionary<object, TValue>();
+        }
+
+        public void Add(TKey key, TValue value)
+        {
+            if(key == null)
+            {
+                dict.Add(nullKey, value);
+            }
+            else
+            {
+                dict.Add(key, value);
+            }
+        }
+
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+        {
+            IEnumerator<KeyValuePair<object, TValue>> enumerator = this.dict.GetEnumerator();
+            List<KeyValuePair<TKey, TValue>> pairs = new List<KeyValuePair<TKey, TValue>>();
+            while (enumerator.MoveNext())
+            {
+                KeyValuePair<object, TValue> pair = enumerator.Current;
+                if(pair.Key is NullKey)
+                {
+                    pairs.Add(new KeyValuePair<TKey, TValue>(null, pair.Value));
+                }
+                else
+                {
+                    pairs.Add(new KeyValuePair<TKey, TValue>((TKey)pair.Key, pair.Value));
+                }
+            }
+            return new CustomIEnumerator(pairs.ToArray());
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return (IEnumerator)GetEnumerator();
+        }
+
+        public TValue this[TKey key]
+        {
+            get
+            {
+                if (key == null) return this.dict[nullKey];
+                return this.dict[key];
+            }
+            set
+            {
+                if (key == null) this.dict[nullKey] = value;
+                else this.dict[key] = value;
+            }
+        }
+
+        public bool ContainsKey(TKey key)
+        {
+            if (key == null) return this.dict.ContainsKey(nullKey);
+            else return this.dict.ContainsKey(key);
+        }
+        public int Count()
+        {
+            return this.dict.Count;
+        }
+    }
+
+    private class ActionManager
+    {
+        public int size = 20;
+        // List of last actions
+        public ActionQueue previousActions;
+        public ActionQueue undoneActions;
+
+        // Undo and Redo count
+        private TMP_Text redoCountText;
+        private TMP_Text undoCountText;
+
+        public ActionManager(int size)
+        {
+            this.size = size;
+            this.previousActions = new ActionQueue(size);
+            this.undoneActions = new ActionQueue(size);
+        }
+
+        public ActionManager(int size, TMP_Text undoCountText, TMP_Text redoCountText)
+        {
+            this.size = size;
+            this.previousActions = new ActionQueue(size);
+            this.undoneActions = new ActionQueue(size);
+
+            this.undoCountText = undoCountText;
+            this.redoCountText = redoCountText;
+        }
+
+        public void addAction(Action action)
+        {
+            if (action == null) return;
+            addToPreviousActions(action);
+            this.undoneActions = new ActionQueue(size);
+
+            // Display new count
+            if (this.redoCountText == null) return;
+            if (this.undoneActions.Count() == 0) this.redoCountText.text = "";
+            else this.redoCountText.text = this.undoneActions.Count().ToString();
+        }
+
+        public void undo()
+        {
+            // Pop latest action from list and undo it
+            Action action = this.previousActions.undoLastAction();
+            if (action == null) return;
+            addToUndoneActions(action);
+
+            // Display new count
+            if (this.undoCountText == null) return;
+            if (this.previousActions.Count() == 0) this.undoCountText.text = "";
+            else this.undoCountText.text = this.previousActions.Count().ToString();
+        }
+        
+        public void redo()
+        {
+            Action action = this.undoneActions.redoLastAction();
+            if (action == null) return;
+            addToPreviousActions(action);
+
+            // Display new count
+            if (this.redoCountText == null) return;
+            if (this.undoneActions.Count() == 0) this.redoCountText.text = "";
+            else this.redoCountText.text = this.undoneActions.Count().ToString();
+        }
+
+        private void addToPreviousActions(Action action)
+        {
+            this.previousActions.Add(action);
+
+            // Display new count
+            if (this.undoCountText == null) return;
+            if (this.previousActions.Count() == 0) this.undoCountText.text = "";
+            else this.undoCountText.text = this.previousActions.Count().ToString();
+        }
+
+        private void addToUndoneActions(Action action)
+        {
+            this.undoneActions.Add(action);
+
+            // Display new count
+            if (this.redoCountText == null) return;
+            if (this.undoneActions.Count() == 0) this.redoCountText.text = "";
+            else this.redoCountText.text = this.undoneActions.Count().ToString();
+        }
+    }
+    private class ActionQueue
+    {
+        public List<Action> actions;
+        public int maxSize;
+        public ActionQueue(int size)
+        {
+            this.actions = new List<Action>();
+            this.maxSize = size;
+        }
+
+        public ActionQueue(List<Action> actions, int size)
+        {
+            this.maxSize = size;
+            if (actions.Count <= size) this.actions = actions;
+            else
+            {
+                List <Action> result = new List<Action>();
+                for (int i = 0; i < size; i++)
+                {
+                    Action action = actions[i];
+                    result.Add(action);
+                }
+                this.actions = result;
+            }
+        }
+
+        public void Add(Action action)
+        {
+            if (action == null) return;
+            actions.Insert(0, action);
+            if(actions.Count > maxSize)
+            {
+                actions.RemoveAt(actions.Count-1);
+            }
+        }
+
+        private Action PopFirst()
+        {
+            if (actions.Count == 0) return null;
+            Action result = actions[0];
+            this.actions.RemoveAt(0);
+
+            return result;
+        }
+
+        public Action undoLastAction()
+        {
+            Action action = PopFirst();
+            if (action == null) return null;
+            action.undo();
+            return action;
+        }
+
+        public Action redoLastAction()
+        {
+            Action action = PopFirst();
+            if (action == null) return null;
+            action.execute();
+            return action;
+        }
+
+        public int Count()
+        {
+            return this.actions.Count;
+        }
+    }
+    private interface Action
+    {
+        public void execute();
+        public void undo();
+    }
+    private class MultipleActions : Action
+    {
+        public List<Action> actions;
+
+        public MultipleActions(List<Action> actions)
+        {
+            this.actions = actions;
+        }
+
+        /// <summary>
+        /// Will create a MultipleActions object with the data in info
+        /// </summary>
+        /// <param name="info"></param> the biggest dictionary will store changes for each tilemap, the dictionary inside stores for each new tile which tiles got replaced by it
+        public MultipleActions(Dictionary<Tilemap, CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>>> info)
+        {
+            List<Action> actions = new List<Action>();
+            foreach (KeyValuePair<Tilemap, CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>>> keyVal in info)
+            {
+                Tilemap tilemap = keyVal.Key;
+                CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>> newTile_positions = keyVal.Value;
+
+                List<Action> tilemapActions = new List<Action>();
+                foreach (KeyValuePair<Tile, CustomDictionary<Tile, List<Vector3Int>>> keyVal2 in newTile_positions)
+                {
+                    Tile newTile = keyVal2.Key;
+                    CustomDictionary<Tile, List<Vector3Int>> positions = keyVal2.Value;
+
+                    TileAction action = new TileAction(positions, tilemap, newTile);
+                    if (action != null) tilemapActions.Add(action);
+                }
+
+                MultipleActions multipleActions = new MultipleActions(tilemapActions);
+                actions.Add(multipleActions);
+            }
+            this.actions = actions;
+        }
+
+        public void execute()
+        {
+            if (actions == null) return;
+            foreach (Action action in actions)
+            {
+                action.execute();
+            }
+        }
+
+        public void undo()
+        {
+            if (actions == null) return;
+            foreach (Action action in actions)
+            {
+                action.undo();
+            }
+        }
+    }
+    private class TileAction : Action
+    {
+        public Tilemap tilemap;
+        public CustomDictionary<Tile, List<Vector3Int>> positions;
+        public Tile newTile;
+
+        public TileAction(CustomDictionary<Tile, List<Vector3Int>> positions, Tilemap tilemap, Tile newTile)
+        {
+            this.positions = positions;
+            this.tilemap = tilemap;
+            this.newTile = newTile;
+        }
+
+        public void execute()
+        {
+            foreach(KeyValuePair<Tile,List<Vector3Int>> keyVal in positions)
+            {
+                List<Vector3Int> pos = keyVal.Value;
+                foreach(Vector3Int position in pos)
+                {
+                    tilemap.SetTile(position, newTile);
+                }
+            }
+        }
+
+        public void undo()
+        {
+            foreach (KeyValuePair<Tile, List<Vector3Int>> keyVal in positions)
+            {
+                List<Vector3Int> pos = keyVal.Value;
+                Tile previousTile = keyVal.Key;
+                foreach (Vector3Int position in pos)
+                {
+                    tilemap.SetTile(position, previousTile);
+                }
+            }
+        }
+    }
+
+    private class PlaceGameObjectAction : Action
+    {
+        public string gameObjectName;
+        public Vector3 position;
+        public Transform parent;
+        public GameObject gameObject;
+
+        public PlaceGameObjectAction(GameObject gameObject, string gameObjectName)
+        {
+            this.gameObjectName = gameObjectName;
+            this.position = gameObject.transform.position;
+            this.gameObject = gameObject;
+            this.parent = gameObject.transform.parent;
+        }
+
+        public void execute()
+        {
+            GameObject gameObjectPrefab = (GameObject)Resources.Load("Prefabs/BuildablePrefabs/" + gameObjectName);
+            GameObject gameObject = Instantiate(gameObjectPrefab, position, Quaternion.identity, parent);
+            NetworkServer.Spawn(gameObject);
+            this.gameObject = gameObject;
+        }
+
+        public void undo()
+        {
+            if (gameObject == null) return;
+            NetworkServer.Destroy(gameObject);
+        }
+    }
+    private class RemoveGameObjectAction : Action
+    {
+        public string gameObjectName;
+        public Vector3 position;
+        public GameObject gameObject;
+        public Transform parent;
+
+        public RemoveGameObjectAction(GameObject gameObject)
+        {
+            this.gameObjectName = gameObject.name;
+            this.position = gameObject.transform.position;
+            this.gameObject = gameObject;
+            this.parent = gameObject.transform.parent;
+        }
+
+        public void execute()
+        {
+            if (gameObject == null) return;
+            NetworkServer.Destroy(gameObject);
+        }
+
+        public void undo()
+        {
+            GameObject gameObjectPrefab = (GameObject)Resources.Load("Prefabs/BuildablePrefabs/" + gameObjectName);
+            GameObject gameObject = Instantiate(gameObjectPrefab, position, Quaternion.identity);
+            NetworkServer.Spawn(gameObject);
+        }
+    }
+
+    // Building size
     private int buildingSize = 1;
+
+    // Last Tile placement
+    private Vector3Int lastTilePlacement = new Vector3Int(0, 0, 1);
 
     // Preview for empty tile
     [SerializeField]
@@ -75,6 +531,9 @@ public class CreateLevelManager : MonoBehaviour
     }
     private class SelectedTileGroup
     {
+        public List<SelectedTileInfo> tilesInfo;
+        public SelectedTileInfo frontTile;
+        public Vector3Int position;
         public SelectedTileGroup(List<SelectedTileInfo> tilesInfo, Vector3Int position)
         {
             this.tilesInfo = tilesInfo;
@@ -92,10 +551,6 @@ public class CreateLevelManager : MonoBehaviour
                 }
             }
         }
-
-        public List<SelectedTileInfo> tilesInfo;
-        public SelectedTileInfo frontTile;
-        public Vector3Int position;
     }
     private class SelectedTileInfo
     {
@@ -173,8 +628,15 @@ public class CreateLevelManager : MonoBehaviour
         }
 
         // Creating buttons for selecting gameobjects to build
-        GameObject castleGameObject = (GameObject)Resources.Load("Prefabs/Entities/Castle/PlayerCastle");
+        GameObject castleGameObject = (GameObject)Resources.Load("Prefabs/BuildablePrefabs/PlayerCastle");
         createGameObjectButton(castleGameObject, buttonPrefab);
+
+        // Finding redo and undo count text
+        this.undoCountText = GameObject.Find("UndoButton").transform.Find("Count").GetComponent<TMP_Text>();
+        this.redoCountText = GameObject.Find("RedoButton").transform.Find("Count").GetComponent<TMP_Text>();
+
+        // Instantiating action manager
+        this.actionManager = new ActionManager(20, this.undoCountText, this.redoCountText);
     }
 
     private void Update()
@@ -209,6 +671,9 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update actions in the fill state
+    /// </summary>
     private void fillState()
     {
         if (EventSystem.current.IsPointerOverGameObject()) return;
@@ -226,89 +691,14 @@ public class CreateLevelManager : MonoBehaviour
         // Store start point
         if (Input.GetMouseButtonDown(0))
         {
-            fill(this.selectedTile, this.selectedTileMap, mousePositionInt);
+            Action action = fill(this.selectedTile, this.selectedTileMap, mousePositionInt);
+            this.actionManager.addAction(action);
         }
     }
 
-    private class FillNode : Node
-    {
-        public Vector3Int startPosition;
-        public FillNode(Vector3Int startPosition, Vector3Int tilePosition) : base(tilePosition)
-        {
-            this.startPosition = startPosition;
-        }
-        public override object Clone()
-        {
-            return new FillNode(startPosition, this.tilePosition);
-        }
-        public override float getCost()
-        {
-            return Vector3Int.Distance(this.startPosition, this.tilePosition);
-        }
-
-        public override int GetHashCode()
-        {
-            return this.tilePosition.x * 1000000 + tilePosition.y;
-        }
-    }
-
-    private void fill(Tile selectedTile, Tilemap tilemap, Vector3Int position)
-    {
-        AVL avl = new AVL();
-        Dictionary<Vector3Int, string> checkedPositions = new Dictionary<Vector3Int, string>();
-        Dictionary<Vector3Int, string> checkPositions = new Dictionary<Vector3Int, string>();
-
-        FillNode startFillNode = new FillNode(position, position);
-        checkPositions.Add(position,"");
-        avl.Add(startFillNode);
-
-        Tile clickedTile = (Tile)tilemap.GetTile(position);
-
-        int counter = 0;
-        int maxCounter = 100000;
-        while(!avl.isEmpty() && checkPositions.Count > 0 && counter < maxCounter)
-        {
-            FillNode currentfillNode = (FillNode)avl.PopMinValue();
-            checkPositions.Remove(currentfillNode.tilePosition);
-
-            checkedPositions.Add(currentfillNode.tilePosition, "");
-            tilemap.SetTile(currentfillNode.tilePosition, selectedTile);
-
-            List<Vector3Int> neighbors = getNeighbours(clickedTile, tilemap, currentfillNode.tilePosition);
-            foreach(Vector3Int neighbor in neighbors)
-            {
-                if (!checkedPositions.ContainsKey(neighbor) && !checkPositions.ContainsKey(neighbor))
-                {
-                    FillNode fillNode = new FillNode(position, neighbor);
-                    checkPositions.Add(neighbor, "");
-                    avl.Add(fillNode);
-                }
-            }
-
-            counter++;
-        }
-    }
-
-    private List<Vector3Int> getNeighbours(Tile tile, Tilemap tilemap, Vector3Int position)
-    {
-        List<Vector3Int> neighbours = new List<Vector3Int>() { 
-            new Vector3Int(position.x+1,position.y,position.z),
-            new Vector3Int(position.x-1, position.y, position.z),
-            new Vector3Int(position.x, position.y+1, position.z),
-            new Vector3Int(position.x,position.y-1,position.z)};
-
-        List<Vector3Int> result = new List<Vector3Int>();
-        foreach (Vector3Int neighbor in neighbours)
-        {
-            Tile neighborTile = (Tile)tilemap.GetTile(neighbor);
-            if (neighborTile == tile)
-            {
-                result.Add(neighbor);
-            }
-        }
-        return result;
-    }
-
+    /// <summary>
+    /// Update actions in the drawing rectangle state
+    /// </summary>
     private void drawingRectangleState()
     {
         if (EventSystem.current.IsPointerOverGameObject()) return;
@@ -342,9 +732,14 @@ public class CreateLevelManager : MonoBehaviour
         if (Input.GetMouseButtonUp(0))
         {
             this.endSelectingPoint = Vector2Int.FloorToInt(mousePosition);
-            drawRectangle(this.startSelectingPoint, this.endSelectingPoint, this.selectedTileMap, this.selectedTile, false);
+            Action action = drawRectangle(this.startSelectingPoint, this.endSelectingPoint, this.selectedTileMap, this.selectedTile, false);
+            this.actionManager.addAction(action);
         }
     }
+
+    /// <summary>
+    /// Update actions in the drawing line state
+    /// </summary>
     private void drawingLineState()
     {
         if (EventSystem.current.IsPointerOverGameObject()) return;
@@ -378,131 +773,8 @@ public class CreateLevelManager : MonoBehaviour
         if (Input.GetMouseButtonUp(0))
         {
             this.endSelectingPoint = Vector2Int.FloorToInt(mousePosition);
-            drawLine(this.startSelectingPoint, this.endSelectingPoint, this.selectedTileMap, this.selectedTile, false);
-        }
-    }
-
-    private void createPreviewPoint(Vector3Int mousePositionInt)
-    {
-        if(this.selectedTile == null)
-        {
-            setTileFull(mousePositionInt, this.emptyTilePreview, this.previewTilemap, true);
-        }
-        else
-        {
-            setTileFull(mousePositionInt, this.selectedTile, this.previewTilemap, true);
-        }
-    }
-    private void createPreviewLine(Vector2 start, Vector2 finish)
-    {
-        if (this.selectedTile == null)
-        {
-            drawLine(start, finish, this.previewTilemap, this.emptyTilePreview, true);
-        }
-        else
-        {
-            drawLine(start, finish, this.previewTilemap, this.selectedTile, true);
-        }
-    }
-    private void createPreviewRectangle(Vector2 start, Vector2 finish)
-    {
-        if (this.selectedTile == null)
-        {
-            drawRectangle(start, finish, this.previewTilemap, this.emptyTilePreview, true);
-        }
-        else
-        {
-            drawRectangle(start, finish, this.previewTilemap, this.selectedTile, true);
-        }
-    }
-
-    private void drawRectangle(Vector2 s, Vector2 f, Tilemap tilemap, Tile tile, bool clear)
-    {
-        if (clear) tilemap.ClearAllTiles();
-
-        Vector3 s3 = new Vector3(s.x, s.y, 0);
-        Vector3 f3 = new Vector3(f.x, f.y, 0);
-
-        Vector3Int start = Vector3Int.FloorToInt(s3);
-        Vector3Int finish = Vector3Int.FloorToInt(f3);
-
-        int minY = Mathf.Min(start.y, finish.y);
-        int maxY = Mathf.Max(start.y, finish.y);
-        int minX = Mathf.Min(start.x, finish.x);
-        int maxX = Mathf.Max(start.x, finish.x);
-
-        for (int x = minX; x <= maxX; x++)
-        {
-            setTileFull(new Vector3Int(x, minY, 0), tile, tilemap, false);
-            setTileFull(new Vector3Int(x, maxY, 0), tile, tilemap, false);
-        }
-        for (int y = minY; y <= maxY; y++)
-        {
-            setTileFull(new Vector3Int(minX, y, 0), tile, tilemap, false);
-            setTileFull(new Vector3Int(maxX, y, 0), tile, tilemap, false);
-        }
-    }
-    private void drawLine(Vector2 s, Vector2 f, Tilemap tilemap, Tile tile, bool clear)
-    {
-        if (clear) tilemap.ClearAllTiles();
-
-        Vector3 s3 = new Vector3(s.x, s.y, 0);
-        Vector3 f3 = new Vector3(f.x, f.y, 0);
-
-        Vector3Int start = Vector3Int.FloorToInt(s3);
-        Vector3Int finish = Vector3Int.FloorToInt(f3);
-
-        // Vertical line
-        if (finish.x == start.x)
-        {
-            int minY = Mathf.Min(start.y, finish.y);
-            int maxY = Mathf.Max(start.y, finish.y);
-            for (int y = minY; y <= maxY; y++)
-            {
-                Vector3Int position = new Vector3Int(finish.x, y, 0);
-                setTileFull(position, tile, tilemap, false);
-            }
-        }
-
-        // Horizontal line
-        else if (finish.y == start.y)
-        {
-            int minX = Mathf.Min(start.x, finish.x);
-            int maxX = Mathf.Max(start.x, finish.x);
-            for (int x = minX; x <= maxX; x++)
-            {
-                Vector3Int position = new Vector3Int(x, finish.y, 0);
-                setTileFull(position, tile, tilemap, false);
-            }
-        }
-
-        else
-        {
-            // Calculating rico
-            float rico = ((float)(finish.y - start.y)) / (finish.x - start.x);
-
-            // y = (rico * (x - start.x)) + start.y
-
-            int minX = Mathf.Min(start.x, finish.x);
-            int maxX = Mathf.Max(start.x, finish.x);
-
-            for (int x = minX; x <= maxX; x++)
-            {
-                int y = (int)((rico * (x - start.x)) + start.y);
-                Vector3Int position = new Vector3Int(x, y, 0);
-                setTileFull(position, tile, tilemap, false);
-            }
-
-            int minY = Mathf.Min(start.y, finish.y);
-            int maxY = Mathf.Max(start.y, finish.y);
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                int x = (int)(((y - start.y) / rico) + start.x);
-
-                Vector3Int position = new Vector3Int(x, y, 0);
-                setTileFull(position, tile, tilemap, false);
-            }
+            Action action = drawLine(this.startSelectingPoint, this.endSelectingPoint, this.selectedTileMap, this.selectedTile, false);
+            this.actionManager.addAction(action);
         }
     }
 
@@ -516,7 +788,8 @@ public class CreateLevelManager : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            placeSelectedTiles();
+            Action action = placeSelectedTiles();
+            this.actionManager.addAction(action);
         }
         if (Input.GetMouseButtonDown(1))
         {
@@ -544,10 +817,27 @@ public class CreateLevelManager : MonoBehaviour
         {
             toViewState();
         }
+
+        if (EventSystem.current.IsPointerOverGameObject()) return;
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            this.mouseButtonDownActions = new List<Action>();
+        }
+
         if (Input.GetMouseButton(0))
         {
-            if (EventSystem.current.IsPointerOverGameObject()) return;
-            setTileFull(mousePositionInt, this.selectedTile, this.selectedTileMap, false);
+            if (this.lastTilePlacement == mousePositionInt) return;
+            Action action = setTileFull(mousePositionInt, this.selectedTile, this.selectedTileMap, false);
+            if (action != null) this.mouseButtonDownActions.Add(action);
+            this.lastTilePlacement = mousePositionInt;
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            if (mouseButtonDownActions.Count == 0) return;
+            MultipleActions action = new MultipleActions(this.mouseButtonDownActions);
+            this.actionManager.addAction(action);
         }
     }
 
@@ -577,6 +867,9 @@ public class CreateLevelManager : MonoBehaviour
                     Castle castle = collider.GetComponent<Castle>();
                     if (castle != null)
                     {
+                        RemoveGameObjectAction action = new RemoveGameObjectAction(castle.gameObject);
+                        this.actionManager.addAction(action);
+
                         NetworkServer.Destroy(castle.gameObject);
                     }
                 }
@@ -584,6 +877,10 @@ public class CreateLevelManager : MonoBehaviour
             else
             {
                 GameObject gameObject = Instantiate(this.selectedGameObject, mousePosition, Quaternion.identity);
+                NetworkServer.Spawn(gameObject);
+
+                PlaceGameObjectAction action = new PlaceGameObjectAction(gameObject, this.selectedGameObject.name);
+                this.actionManager.addAction(action);
 
                 Castle castle = gameObject.GetComponent<Castle>();
                 if (castle != null)
@@ -617,6 +914,308 @@ public class CreateLevelManager : MonoBehaviour
         {
             this.endSelectingPoint = mousePositionInt;
             createSelectingGrid(this.startSelectingPoint, this.endSelectingPoint);
+        }
+    }
+
+    public void undoLastAction()
+    {
+        this.actionManager.undo();
+    }
+
+    public void redoLastUndoneAction()
+    {
+        this.actionManager.redo();
+    }
+
+    /// <summary>
+    /// Node class created for the AVL tree for the fill method
+    /// </summary>
+    private class FillNode : Node
+    {
+        public Vector3Int startPosition;
+        public FillNode(Vector3Int startPosition, Vector3Int tilePosition) : base(tilePosition)
+        {
+            this.startPosition = startPosition;
+        }
+        public override object Clone()
+        {
+            return new FillNode(startPosition, this.tilePosition);
+        }
+        public override float getCost()
+        {
+            return Vector3Int.Distance(this.startPosition, this.tilePosition);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.tilePosition.x * 1000000 + tilePosition.y;
+        }
+    }
+
+    /// <summary>
+    /// Fills a space with a certain tile
+    /// </summary>
+    /// <param name="selectedTile"></param>
+    /// <param name="tilemap"></param>
+    /// <param name="position"></param>
+    private Action fill(Tile selectedTile, Tilemap tilemap, Vector3Int position)
+    {
+        AVL avl = new AVL();
+        Dictionary<Vector3Int, string> checkedPositions = new Dictionary<Vector3Int, string>();
+        CustomDictionary<Tile, List<Vector3Int>> positions = new CustomDictionary<Tile, List<Vector3Int>>();
+        List<Vector3Int> pos = new List<Vector3Int>();
+        Dictionary<Vector3Int, string> checkPositions = new Dictionary<Vector3Int, string>();
+
+        FillNode startFillNode = new FillNode(position, position);
+        checkPositions.Add(position, "");
+        avl.Add(startFillNode);
+
+        Tile clickedTile = (Tile)tilemap.GetTile(position);
+
+        // If clicked tile and selected tile are the same then nothing will change
+        if (clickedTile == selectedTile) return null;
+
+        int counter = 0;
+        int maxCounter = 1000;
+        while (!avl.isEmpty() && checkPositions.Count > 0 && counter < maxCounter)
+        {
+            FillNode currentfillNode = (FillNode)avl.PopMinValue();
+            checkPositions.Remove(currentfillNode.tilePosition);
+
+            checkedPositions.Add(currentfillNode.tilePosition, "");
+
+            pos.Add(currentfillNode.tilePosition);
+            tilemap.SetTile(currentfillNode.tilePosition, selectedTile);
+
+            List<Vector3Int> neighbors = getNeighbors(clickedTile, tilemap, currentfillNode.tilePosition);
+            foreach (Vector3Int neighbor in neighbors)
+            {
+                if (!checkedPositions.ContainsKey(neighbor) && !checkPositions.ContainsKey(neighbor))
+                {
+                    FillNode fillNode = new FillNode(position, neighbor);
+                    checkPositions.Add(neighbor, "");
+                    avl.Add(fillNode);
+                }
+            }
+
+            counter++;
+        }
+
+        positions.Add(clickedTile, pos);
+        TileAction tileAction = new TileAction(positions, tilemap, selectedTile);
+        return tileAction;
+    }
+
+    /// <summary>
+    /// Gets neighbors of a certain tile, only tiles that are the same type will be considered neighbors
+    /// </summary>
+    /// <param name="tile"></param>
+    /// <param name="tilemap"></param>
+    /// <param name="position"></param>
+    /// <returns></returns>
+    private List<Vector3Int> getNeighbors(Tile tile, Tilemap tilemap, Vector3Int position)
+    {
+        List<Vector3Int> neighbours = new List<Vector3Int>() {
+            new Vector3Int(position.x+1,position.y,position.z),
+            new Vector3Int(position.x-1, position.y, position.z),
+            new Vector3Int(position.x, position.y+1, position.z),
+            new Vector3Int(position.x,position.y-1,position.z)};
+
+        List<Vector3Int> result = new List<Vector3Int>();
+        foreach (Vector3Int neighbor in neighbours)
+        {
+            Tile neighborTile = (Tile)tilemap.GetTile(neighbor);
+            if (neighborTile == tile)
+            {
+                result.Add(neighbor);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a preview of a point
+    /// </summary>
+    /// <param name="mousePositionInt"></param>
+    private void createPreviewPoint(Vector3Int mousePositionInt)
+    {
+        if (this.selectedTile == null)
+        {
+            setTileFull(mousePositionInt, this.emptyTilePreview, this.previewTilemap, true);
+        }
+        else
+        {
+            setTileFull(mousePositionInt, this.selectedTile, this.previewTilemap, true);
+        }
+    }
+
+    /// <summary>
+    /// Creates a preview of a line
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="finish"></param>
+    private void createPreviewLine(Vector2 start, Vector2 finish)
+    {
+        if (this.selectedTile == null)
+        {
+            drawLine(start, finish, this.previewTilemap, this.emptyTilePreview, true);
+        }
+        else
+        {
+            drawLine(start, finish, this.previewTilemap, this.selectedTile, true);
+        }
+    }
+
+    /// <summary>
+    /// Creates a preview of a rectangle
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="finish"></param>
+    private void createPreviewRectangle(Vector2 start, Vector2 finish)
+    {
+        if (this.selectedTile == null)
+        {
+            drawRectangle(start, finish, this.previewTilemap, this.emptyTilePreview, true);
+        }
+        else
+        {
+            drawRectangle(start, finish, this.previewTilemap, this.selectedTile, true);
+        }
+    }
+
+    /// <summary>
+    /// Draws a rectangle
+    /// </summary>
+    /// <param name="s"></param>
+    /// <param name="f"></param>
+    /// <param name="tilemap"></param>
+    /// <param name="tile"></param>
+    /// <param name="clear"></param>
+    private Action drawRectangle(Vector2 s, Vector2 f, Tilemap tilemap, Tile tile, bool clear)
+    {
+        if (clear) tilemap.ClearAllTiles();
+
+        Vector3 s3 = new Vector3(s.x, s.y, 0);
+        Vector3 f3 = new Vector3(f.x, f.y, 0);
+
+        Vector3Int start = Vector3Int.FloorToInt(s3);
+        Vector3Int finish = Vector3Int.FloorToInt(f3);
+
+        int minY = Mathf.Min(start.y, finish.y);
+        int maxY = Mathf.Max(start.y, finish.y);
+        int minX = Mathf.Min(start.x, finish.x);
+        int maxX = Mathf.Max(start.x, finish.x);
+
+        List<Action> actions = new List<Action>();
+        for (int x = minX; x <= maxX; x++)
+        {
+            Action action1 = setTileFull(new Vector3Int(x, minY, 0), tile, tilemap, false);
+            Action action2 = setTileFull(new Vector3Int(x, maxY, 0), tile, tilemap, false);
+
+            if (action1 != null) actions.Add(action1);
+            if (action2 != null) actions.Add(action2);
+        }
+        for (int y = minY; y <= maxY; y++)
+        {
+            Action action1 = setTileFull(new Vector3Int(minX, y, 0), tile, tilemap, false);
+            Action action2 = setTileFull(new Vector3Int(maxX, y, 0), tile, tilemap, false);
+
+            if (action1 != null) actions.Add(action1);
+            if (action2 != null) actions.Add(action2);
+        }
+
+        if (actions.Count == 0) return null;
+        return new MultipleActions(actions);
+    }
+
+    /// <summary>
+    /// Draws a line
+    /// </summary>
+    /// <param name="s"></param>
+    /// <param name="f"></param>
+    /// <param name="tilemap"></param>
+    /// <param name="tile"></param>
+    /// <param name="clear"></param>
+    private Action drawLine(Vector2 s, Vector2 f, Tilemap tilemap, Tile tile, bool clear)
+    {
+        if (clear) tilemap.ClearAllTiles();
+
+        Vector3 s3 = new Vector3(s.x, s.y, 0);
+        Vector3 f3 = new Vector3(f.x, f.y, 0);
+
+        Vector3Int start = Vector3Int.FloorToInt(s3);
+        Vector3Int finish = Vector3Int.FloorToInt(f3);
+
+        // Vertical line
+        if (finish.x == start.x)
+        {
+            List<Action> actions = new List<Action>();
+
+            int minY = Mathf.Min(start.y, finish.y);
+            int maxY = Mathf.Max(start.y, finish.y);
+            for (int y = minY; y <= maxY; y++)
+            {
+                Vector3Int position = new Vector3Int(finish.x, y, 0);
+                Action action = setTileFull(position, tile, tilemap, false);
+                if (action != null) actions.Add(action);
+            }
+
+            if (actions.Count == 0) return null;
+            return new MultipleActions(actions);
+        }
+
+        // Horizontal line
+        else if (finish.y == start.y)
+        {
+            List<Action> actions = new List<Action>();
+
+            int minX = Mathf.Min(start.x, finish.x);
+            int maxX = Mathf.Max(start.x, finish.x);
+            for (int x = minX; x <= maxX; x++)
+            {
+                Vector3Int position = new Vector3Int(x, finish.y, 0);
+                Action action = setTileFull(position, tile, tilemap, false);
+                if (action != null) actions.Add(action);
+            }
+
+            if (actions.Count == 0) return null;
+            return new MultipleActions(actions);
+        }
+
+        else
+        {
+            List<Action> actions = new List<Action>();
+
+            // Calculating rico
+            float rico = ((float)(finish.y - start.y)) / (finish.x - start.x);
+
+            // y = (rico * (x - start.x)) + start.y
+
+            int minX = Mathf.Min(start.x, finish.x);
+            int maxX = Mathf.Max(start.x, finish.x);
+
+            for (int x = minX; x <= maxX; x++)
+            {
+                int y = (int)((rico * (x - start.x)) + start.y);
+                Vector3Int position = new Vector3Int(x, y, 0);
+                Action action = setTileFull(position, tile, tilemap, false);
+                if (action != null) actions.Add(action);
+            }
+
+            int minY = Mathf.Min(start.y, finish.y);
+            int maxY = Mathf.Max(start.y, finish.y);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                int x = (int)(((y - start.y) / rico) + start.x);
+
+                Vector3Int position = new Vector3Int(x, y, 0);
+                Action action = setTileFull(position, tile, tilemap, false);
+                if (action != null) actions.Add(action);
+            }
+
+            if (actions.Count == 0) return null;
+            return new MultipleActions(actions);
         }
     }
 
@@ -721,8 +1320,11 @@ public class CreateLevelManager : MonoBehaviour
     /// <summary>
     /// Will place the selected tiles on the current mouse position
     /// </summary>
-    private void placeSelectedTiles()
+    private Action placeSelectedTiles()
     {
+        // This variable will store for each tilemap the chages that have been made
+        Dictionary<Tilemap, CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>>> info = new Dictionary<Tilemap, CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>>>();
+
         Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mousePosition.z = 0;
         Vector3Int mousePosition3Int = Vector3Int.FloorToInt(mousePosition);
@@ -732,9 +1334,56 @@ public class CreateLevelManager : MonoBehaviour
             Vector3Int position = selectedTileGroup.position + mousePosition3Int;
             foreach (SelectedTileInfo selectedTileInfo in selectedTileGroup.tilesInfo)
             {
-                selectedTileInfo.tilemap.SetTile(position, selectedTileInfo.tile);
+                Tilemap tilemap = selectedTileInfo.tilemap;
+                Tile newTile = selectedTileInfo.tile;
+                Tile previousTile = (Tile)selectedTileInfo.tilemap.GetTile(position);
+
+                tilemap.SetTile(position, newTile);
+
+
+                // Check if tilemap in info
+                if (info.ContainsKey(tilemap))
+                {
+                    CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>> newTile_positions = info[tilemap];
+
+                    // Check if newTile is in existing dictionary
+                    if (newTile_positions.ContainsKey(newTile))
+                    {
+                        CustomDictionary<Tile, List<Vector3Int>> positions = newTile_positions[newTile];
+
+                        // Check if previousTile is in existing dictionary
+                        if (positions.ContainsKey(previousTile))
+                        {
+                            positions[previousTile].Add(position);
+                        }
+                        else
+                        {
+                            positions.Add(previousTile, new List<Vector3Int>() { position });
+                        }
+                        newTile_positions[newTile] = positions;
+                    }
+                    else
+                    {
+                        CustomDictionary<Tile, List<Vector3Int>> positions = new CustomDictionary<Tile, List<Vector3Int>>();
+                        positions.Add(previousTile, new List<Vector3Int>() { position });
+                        newTile_positions.Add(newTile, positions);
+                    }
+                    info[tilemap] = newTile_positions;
+                }
+                else
+                {
+                    CustomDictionary<Tile, List<Vector3Int>> positions = new CustomDictionary<Tile, List<Vector3Int>>();
+                    positions.Add(previousTile, new List<Vector3Int>() { position });
+
+                    CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>> newTile_positions = new CustomDictionary<Tile, CustomDictionary<Tile, List<Vector3Int>>>();
+                    newTile_positions.Add(newTile, positions);
+
+                    info.Add(tilemap, newTile_positions);
+                }
             }
         }
+
+        return new MultipleActions(info);
     }
 
     /// <summary>
@@ -744,20 +1393,37 @@ public class CreateLevelManager : MonoBehaviour
     /// <param name="tile"></param>
     /// <param name="tilemap"></param>
     /// <param name="clear"></param> true => clears tilemap, false => does not clear tilemap
-    private void setTileFull(Vector3Int pos, Tile tile, Tilemap tilemap, bool clear)
+    private Action setTileFull(Vector3Int pos, Tile tile, Tilemap tilemap, bool clear)
     {
         if (clear) tilemap.ClearAllTiles();
         int minX = pos.x - (this.buildingSize - 1);
         int maxX = pos.x + (this.buildingSize - 1);
         int minY = pos.y - (this.buildingSize - 1);
         int maxY = pos.y + (this.buildingSize - 1);
+        CustomDictionary<Tile, List<Vector3Int>> positions = new CustomDictionary<Tile, List<Vector3Int>>();
         for (int x = minX; x <= maxX; x++)
         {
             for (int y = minY; y <= maxY; y++)
             {
-                tilemap.SetTile(new Vector3Int(x,y,0), tile);
+                Vector3Int currentPosition = new Vector3Int(x, y, 0);
+                Tile previousTile = (Tile)tilemap.GetTile(currentPosition);
+                tilemap.SetTile(currentPosition, tile);
+
+                if (previousTile != tile)
+                {
+                    if (positions.ContainsKey(previousTile))
+                    {
+                        positions[previousTile].Add(currentPosition);
+                    }
+                    else
+                    {
+                        positions.Add(previousTile, new List<Vector3Int>() { currentPosition });
+                    }
+                }
             }
         }
+        if(positions.Count() != 0) return new TileAction(positions, tilemap, tile);
+        return null;
     }
 
     /// <summary>
@@ -1014,7 +1680,7 @@ public class CreateLevelManager : MonoBehaviour
     /// </summary>
     public void selectErasor()
     {
-        if(buildingState == BuildingState.BuildingTiles || buildingState == BuildingState.DrawingRectangle || buildingState == BuildingState.DrawingLine)
+        if(buildingState == BuildingState.BuildingTiles || buildingState == BuildingState.DrawingRectangle || buildingState == BuildingState.DrawingLine || buildingState == BuildingState.Fill)
         {
             setTile(null);
         }
@@ -1047,6 +1713,10 @@ public class CreateLevelManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Selects a tilemap and changes the infopanel
+    /// </summary>
+    /// <param name="tilemap"></param>
     private void selectTilemap(Tilemap tilemap)
     {
         this.selectedTileMap = tilemap;
