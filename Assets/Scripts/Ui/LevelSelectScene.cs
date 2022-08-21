@@ -48,20 +48,14 @@ public class LevelSelectScene : NetworkBehaviour
 
     public void activateSelectLevelUi(bool active)
     {
-        if (selectLevelUi == null) return;
-        selectLevelUi.SetActive(active);
+        GameObject levels = GameObject.Find("LevelScrollViews");
+        if (levels == null) return;
+        levels.SetActive(active);
     }
 
     public void leaveGame()
     {
-        if (client.isServer)
-        {
-            networkManager.StopHost();
-        }
-        else
-        {
-            networkManager.StopClient();
-        }
+        client.leaveGame();
     }
 
     public void setClient(Client client)

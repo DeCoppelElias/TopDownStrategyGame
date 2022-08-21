@@ -4,17 +4,28 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Mirror;
 using kcp2k;
+using UnityEngine.UI;
 
 public class BackToMainMenuManager : MonoBehaviour
 {
+    private float duration = 2;
+    private Slider loadingBar;
+    private float startTime;
     private void Start()
     {
-        Invoke("backToMainMenu", 2);
+        loadingBar = GameObject.Find("LoadingBar").GetComponent<Slider>();
+        startTime = Time.time;
+        Invoke("backToMainMenu", duration);
+    }
+
+    private void Update()
+    {
+        loadingBar.value = (Time.time - startTime) / duration;
     }
 
     private void backToMainMenu()
     {
-        NetworkManager.singleton.onlineScene = "MainMenu";
+        /*NetworkManager.singleton.onlineScene = "MainMenu";
 
         // Setting up server to simulate background
         if (NetworkServer.connections.Count == 0)
@@ -41,6 +52,12 @@ public class BackToMainMenuManager : MonoBehaviour
                 }
                 counter++;
             }
-        }
+        }*/
+
+        NetworkServer.Shutdown();
+        GameObject networkManager = GameObject.Find("NetworkManager");
+        Destroy(networkManager);
+
+        SceneManager.LoadScene("MainMenu");
     }
 }

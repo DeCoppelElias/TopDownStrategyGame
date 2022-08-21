@@ -175,10 +175,10 @@ public class CameraMovement : MonoBehaviour
         if (!BoundedMovement) return;
         float vertExtent = Camera.main.orthographicSize;
         float horzExtent = vertExtent * Screen.width / Screen.height;
-        cameraMax_x = topRight.x - horzExtent;
-        cameraMax_y = topRight.y - vertExtent;
-        cameraMin_x = bottomLeft.x + horzExtent;
-        cameraMin_y = bottomLeft.y + vertExtent;
+        cameraMax_x = topRight.x - horzExtent - 1;
+        cameraMax_y = topRight.y - vertExtent - 1;
+        cameraMin_x = bottomLeft.x + horzExtent + 2;
+        cameraMin_y = bottomLeft.y + vertExtent + 2;
     }
 
     /// <summary>

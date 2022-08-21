@@ -1854,15 +1854,12 @@ public class CreateLevelManager : MonoBehaviour
 
     public void saveLevel()
     {
-        string levelName = GameObject.Find("SaveButtonInputField").GetComponent<TMP_InputField>().text;
-        SaveLoadLevel saveLoadLevel = GameObject.Find("LoadSaveLevelManager").GetComponent<SaveLoadLevel>();
-        saveLoadLevel.saveLevel(levelName);
+        GameObject.Find("SaveLevelManager").GetComponent<SaveLevel>().saveLevel();
     }
 
     public void loadLevel()
     {
-        string levelName = GameObject.Find("LoadButtonInputField").GetComponent<TMP_InputField>().text;
-        GameObject.Find("LoadSaveLevelManager").GetComponent<SaveLoadLevel>().loadLevel(levelName);
+        GameObject.Find("LoadLevelManager").GetComponent<LoadLevel>().loadLevel();
     }
 
     public void OnClickLevelOptions()

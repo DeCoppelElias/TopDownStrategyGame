@@ -58,13 +58,20 @@ public class MainSceneUi : NetworkBehaviour
 
     public void connect()
     {
-        string[] s = inputField.text.Split(':');
-        ConnectToServerManager.serverAdress = s[0];
-        ConnectToServerManager.port = ushort.Parse(s[1]);
+        try
+        {
+            string[] s = inputField.text.Split(':');
+            ConnectToServerManager.serverAdress = s[0];
+            ConnectToServerManager.port = ushort.Parse(s[1]);
 
-        networkManager.offlineScene = "ConnectToServerScene";
+            networkManager.offlineScene = "ConnectToServerScene";
 
-        networkManager.StopHost();
+            networkManager.StopHost();
+        }
+        catch
+        {
+            return;
+        }
     }
 
     public void startSinglePlayer()

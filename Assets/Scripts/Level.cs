@@ -23,7 +23,7 @@ public class Level : NetworkBehaviour
 
     private CameraMovement cameraMovement;
 
-    private SaveLoadLevel saveLoadLevel;
+    private LoadLevel loadLevel;
 
     private void Start()
     {
@@ -31,7 +31,7 @@ public class Level : NetworkBehaviour
         wallTilemap = GameObject.Find("Walls").GetComponent<Tilemap>();
         floorTileMap = GameObject.Find("Ground").GetComponent<Tilemap>();
         decorationTilemap = GameObject.Find("Decoration").GetComponent<Tilemap>();
-        saveLoadLevel = this.GetComponent<SaveLoadLevel>();
+        loadLevel = this.GetComponent<LoadLevel>();
     }
 
     
@@ -39,12 +39,12 @@ public class Level : NetworkBehaviour
     [Server]
     public void initLevelServer()
     {
-        saveLoadLevel.loadLevelServer(levelName);
+        loadLevel.loadLevelServer(levelName);
     }
 
     public string getLevelInfo()
     {
-        return saveLoadLevel.getLevelInfoString(levelName);
+        return loadLevel.getLevelInfoString(levelName);
     }
 
     public void addPartOfLevelInfo(string levelInfoPart)
@@ -55,7 +55,7 @@ public class Level : NetworkBehaviour
     public void initLevelClient()
     {
         if (levelInfo == null) return;
-        saveLoadLevel = this.GetComponent<SaveLoadLevel>();
-        saveLoadLevel.loadLevelClient(levelInfo);
+        loadLevel = this.GetComponent<LoadLevel>();
+        loadLevel.loadLevelClient(levelInfo);
     }
 }

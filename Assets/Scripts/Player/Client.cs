@@ -93,10 +93,17 @@ public class Client : Player
 
             findCastleForClient();
 
-            Camera.main.transform.position = this.castle.transform.position + new Vector3(0,0,-10);
+            if (this.castle != null) Camera.main.transform.position = this.castle.transform.position + new Vector3(0,0,-10);
+
+            Invoke("castleCheck", 0.5f);
 
             Invoke("clientSetupDone", 0.5f);
         }
+    }
+
+    private void castleCheck()
+    {
+        if (this.castle == null) this.uiManager.disableAllUi();
     }
 
     [Command]
@@ -132,10 +139,10 @@ public class Client : Player
     public void leaveGame()
     {
         if (!isLocalPlayer) return;
+        this.onClientDisconnect(this.gameObject);
         if (SceneManager.GetActiveScene().name == "Level")
         {
             this.changeGameState("Normal");
-            this.onClientDisconnect(this.gameObject);
         }
         Invoke("disconnect", 0.5f);
     }
@@ -148,12 +155,17 @@ public class Client : Player
     {
         if (isServer)
         {
-            Debug.Log("Stop host");
-            NetworkManager.singleton.ServerChangeScene("LevelSelectScene");
+            if(SceneManager.GetActiveScene().name == "Level")
+            {
+                NetworkManager.singleton.ServerChangeScene("LevelSelectScene");
+            }
+            else if(SceneManager.GetActiveScene().name == "LevelSelectScene")
+            {
+                NetworkManager.singleton.StopHost();
+            }
         }
         else
         {
-            Debug.Log("Stop client");
             NetworkManager.singleton.StopClient();
         }
     }

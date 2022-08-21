@@ -5,6 +5,7 @@ using Mirror;
 using UnityEngine.SceneManagement;
 using System.Text;
 using System.Linq;
+using UnityEngine.UI;
 
 public class Server : NetworkBehaviour
 {
@@ -33,6 +34,8 @@ public class Server : NetworkBehaviour
     private bool levelSetup = false;
     private bool setupCastlesDone = false;
 
+    [SyncVar(hook = nameof(onLoadingBarProgressChanged))]
+    private float loadingBarProgress = 0;
     [SyncVar(hook = nameof(onLoadingInfoChanged))]
     private string loadingInfo = "";
     [SyncVar(hook = nameof(onLoadingDoneChanged))]
@@ -52,6 +55,7 @@ public class Server : NetworkBehaviour
             // First initial wait so all clients can connect
             if (this._currentGameState == GameState.InitialWait)
             {
+                loadingBarProgress = 1f / 8;
                 loadingInfo = "Waiting for clients to connect";
 
                 if (Time.time - startTime > 2)
@@ -63,6 +67,7 @@ public class Server : NetworkBehaviour
             // Find all clients and check if they are all registered
             else if (this._currentGameState == GameState.SearchingClients)
             {
+                loadingBarProgress = 2f / 8;
                 loadingInfo = "Searching for clients";
 
                 GameObject clients = GameObject.Find("Clients");
@@ -75,6 +80,7 @@ public class Server : NetworkBehaviour
             // Loads level
             else if (this._currentGameState == GameState.LoadingLevel)
             {
+                loadingBarProgress = 3f / 8;
                 loadingInfo = "Loading level";
 
                 // Init server objects in level (ex castles)
@@ -92,6 +98,7 @@ public class Server : NetworkBehaviour
             // Setup all clients
             else if (this._currentGameState == GameState.SetupClients)
             {
+                loadingBarProgress = 4f / 8;
                 loadingInfo = "Setting up clients";
 
                 foreach (Client client in this.clients)
@@ -104,6 +111,7 @@ public class Server : NetworkBehaviour
             // Wait until clients are all done
             else if (this._currentGameState == GameState.WaitForSetupClients)
             {
+                loadingBarProgress = 5f / 8;
                 loadingInfo = "Waiting for clients to setup";
 
                 if (amountClientsSetup == this.clients.Count)
@@ -115,6 +123,7 @@ public class Server : NetworkBehaviour
             // Setup all aiClients
             else if (this._currentGameState == GameState.SetupAi)
             {
+                loadingBarProgress = 6f / 8;
                 loadingInfo = "Setting up Ai";
 
                 this.setupEmptyCastles();
@@ -124,12 +133,14 @@ public class Server : NetworkBehaviour
             // Wait until aiClients are all done
             else if (this._currentGameState == GameState.WaitForSetupAi)
             {
+                loadingBarProgress = 7f / 8;
                 loadingInfo = "Waiting for Ai to setup";
 
                 if (setupCastlesDone)
                 {
                     this._currentGameState = GameState.Normal;
                     loadingDone = true;
+                    loadingBarProgress = 8f / 8;
                 }
             }
 
@@ -225,6 +236,11 @@ public class Server : NetworkBehaviour
         }
     }
 
+    private void onLoadingBarProgressChanged(float oldLoadingBarProgress, float newLoadingBarProgress)
+    {
+        GameObject.Find("LoadingBar").GetComponent<Slider>().value = newLoadingBarProgress;
+    }
+
     /// <summary>
     /// If syncvar loadingInfo changed, it will display it on screen on all clients
     /// </summary>
@@ -277,7 +293,7 @@ public class Server : NetworkBehaviour
         }
         else if (SceneManager.GetActiveScene().name == "LevelSelectScene")
         {
-            Invoke("clientJoinedLevelSelect",0.5f);
+            Invoke("refreshClientAmount", 0.5f);
         }
     }
 
@@ -299,7 +315,7 @@ public class Server : NetworkBehaviour
     }
 
     [Server]
-    private void clientJoinedLevelSelect()
+    public void refreshClientAmount()
     {
         setAmountOfPlayersOnAllClients(this.clients.Count);
     }
@@ -608,8 +624,18 @@ public class Server : NetworkBehaviour
     {
         //Debug.Log("client " + this + " disconnected, setting castle owner to null");
         Client client = clientGameObject.GetComponent<Client>();
+        this.clients.Remove(client);
 
-        setupEmptyCastle(client.castle);
+        if (SceneManager.GetActiveScene().name == "Level")
+        {
+            if (client.castle == null) return;
+
+            setupEmptyCastle(client.castle);
+        }
+        else if (SceneManager.GetActiveScene().name == "LevelSelectScene")
+        {
+            refreshClientAmount();
+        }
     }
 
     /// <summary>
