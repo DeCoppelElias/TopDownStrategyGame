@@ -11,6 +11,7 @@ public abstract class Troop : AttackingEntity
 
     [SerializeField]
     private float viewRange = 5;
+
     public List<Vector2> Path
     {
         set => _path = value;
@@ -29,9 +30,14 @@ public abstract class Troop : AttackingEntity
     private float detectRingOpacity = 0;
 
     [SyncVar(hook = nameof(onChangeVisibility))]
-    private bool globalVisibility = true;
+    private bool _globalVisibility = true;
+    public bool GlobalVisibility { get => _globalVisibility; }
 
     private DecorationCollisions decorationCollisions;
+
+    // Rotation
+    [SyncVar(hook = nameof(onLocalScaleChanged))]
+    private Vector3 localScale;
 
     public override void Start()
     {
@@ -224,13 +230,9 @@ public abstract class Troop : AttackingEntity
         _currentEntityState = AttackingEntity.EntityState.Attacking;
         this.detectRingOpacity = 1f;
         this.attackRingOpacity = 1f;
-        this.globalVisibility = true;
+        this._globalVisibility = true;
 
-        Animator animator = this.GetComponent<Animator>();
-        if(animator != null)
-        {
-            animator.SetBool("Attacking", true);
-        }
+        this.ServerClient.attackingAnimationSync(this.gameObject, true);
     }
 
     protected override void toWalkingToTargetState()
@@ -242,18 +244,14 @@ public abstract class Troop : AttackingEntity
         if (decorationCollisions == null) return;
         if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
         {
-            this.globalVisibility = false;
+            this._globalVisibility = false;
         }
         else
         {
-            this.globalVisibility = true;
+            this._globalVisibility = true;
         }
 
-        Animator animator = this.GetComponent<Animator>();
-        if (animator != null)
-        {
-            animator.SetBool("Attacking", false);
-        }
+        this.ServerClient.attackingAnimationSync(this.gameObject, false);
     }
 
     protected override void toNormalState()
@@ -266,18 +264,14 @@ public abstract class Troop : AttackingEntity
         if (decorationCollisions == null) return;
         if (decorationCollisions.isColliding(GetComponent<Collider2D>()))
         {
-            this.globalVisibility = false;
+            this._globalVisibility = false;
         }
         else
         {
-            this.globalVisibility = true;
+            this._globalVisibility = true;
         }
 
-        Animator animator = this.GetComponent<Animator>();
-        if (animator != null)
-        {
-            animator.SetBool("Attacking", false);
-        }
+        this.ServerClient.attackingAnimationSync(this.gameObject, false);
     }
     /// <summary>
     /// This method is called when an entity is killed. It does all the needed procedures before actually deleting the object
@@ -476,20 +470,7 @@ public abstract class Troop : AttackingEntity
         }
     }
 
-    public override Dictionary<string, object> getEntityInfo()
-    {
-        Dictionary<string, object> result = new Dictionary<string, object>();
-        result.Add("Name", this.name);
-        result.Add("Damage", this.Damage);
-        result.Add("AttackCooldown", this.AttackCooldown);
-        result.Add("Range", this.Range);
-        result.Add("CurrentEntityState", this.CurrentEntityState.ToString());
-        if(this.CurrentEntityState == EntityState.Attacking)
-        {
-            result.Add("CurrentTarget", this.CurrentTarget.ToString());
-        }
-        return result;
-    }
+    public override abstract Dictionary<string, object> getEntityInfo();
 
     public void onDetectRingChangeOpacity(float oldOpacity, float newOpacity)
     {
@@ -511,13 +492,13 @@ public abstract class Troop : AttackingEntity
     public void onEnterDecoration()
     {
         if (!isServer) return;
-        this.globalVisibility = false;
+        this._globalVisibility = false;
     }
 
     public void onExitDecoration()
     {
         if (!isServer) return;
-        this.globalVisibility = true;
+        this._globalVisibility = true;
     }
 
     public void setVisibility(bool newVisibility)
@@ -539,5 +520,10 @@ public abstract class Troop : AttackingEntity
     private void onChangeVisibility(bool oldVisibility, bool newVisibility)
     {
         setVisibility(newVisibility);
+    }
+
+    private void onLocalScaleChanged(Vector3 oldLocalScale, Vector3 newLocalScale)
+    {
+        this.transform.localScale = newLocalScale;
     }
 }

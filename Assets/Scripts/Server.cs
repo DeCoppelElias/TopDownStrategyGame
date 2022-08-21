@@ -238,7 +238,13 @@ public class Server : NetworkBehaviour
 
     private void onLoadingBarProgressChanged(float oldLoadingBarProgress, float newLoadingBarProgress)
     {
-        GameObject.Find("LoadingBar").GetComponent<Slider>().value = newLoadingBarProgress;
+        GameObject loadingBarGameObject = GameObject.Find("LoadingBar");
+        if (loadingBarGameObject == null) return;
+
+        Slider slider = loadingBarGameObject.GetComponent<Slider>();
+        if (slider == null) return;
+
+        slider.value = newLoadingBarProgress;
     }
 
     /// <summary>
@@ -324,6 +330,17 @@ public class Server : NetworkBehaviour
     private void setAmountOfPlayersOnAllClients(int amountOfPlayers)
     {
         GameObject.Find("Canvas").GetComponent<LevelSelectScene>().setAmountOfPlayers(amountOfPlayers);
+    }
+
+    [ClientRpc]
+    public void attackingAnimationSync(GameObject troop, bool attacking)
+    {
+        if (troop == null) return;
+        Animator animator = troop.GetComponent<Animator>();
+        if (animator != null)
+        {
+            animator.SetBool("Attacking", attacking);
+        }
     }
 
     /// <summary>

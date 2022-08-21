@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class Tower : AttackingEntity
+public abstract class Tower : AttackingEntity
 {
     /// <summary>
     /// This method is called when a tower is destroyed. It does all the needed procedures before actually deleting the object
@@ -97,20 +97,7 @@ public class Tower : AttackingEntity
         }
     }
 
-    public override Dictionary<string, object> getEntityInfo()
-    {
-        Dictionary<string, object> result = new Dictionary<string, object>();
-        result.Add("Name", this.name);
-        result.Add("Damage", this.Damage);
-        result.Add("AttackCooldown", this.AttackCooldown);
-        result.Add("Range", this.Range);
-        result.Add("CurrentEntityState", this.CurrentEntityState.ToString());
-        if (this.CurrentEntityState == EntityState.Attacking)
-        {
-            result.Add("CurrentTarget", this.CurrentTarget.ToString());
-        }
-        return result;
-    }
+    public abstract override Dictionary<string, object> getEntityInfo();
 
     protected override void toAttackingState()
     {

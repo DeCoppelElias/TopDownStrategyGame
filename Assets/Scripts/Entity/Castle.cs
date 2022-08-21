@@ -100,7 +100,10 @@ public class Castle : AttackingEntity
         if(_towers.Count == maxTowers)
         {
             DebugPanel.displayDebugMessage("You have reached the maximum amount of towers");
-            Debug.Log("You have reached the maximum amount of towers");
+            if (this.Owner is Client client)
+            {
+                client.createTowerEvent(towerName);
+            }
             return;
         }
 
@@ -108,7 +111,10 @@ public class Castle : AttackingEntity
         if (Vector2.Distance(this.transform.position, spawnPosition) > buildRange)
         {
             DebugPanel.displayDebugMessage("Building that far away from your castle is not allowed");
-            Debug.Log("Building that far away from your castle is not allowed");
+            if (this.Owner is Client client)
+            {
+                client.createTowerEvent(towerName);
+            }
             return;
         }
 
@@ -119,8 +125,11 @@ public class Castle : AttackingEntity
             float spriteSize = tower.transform.Find("AttackRing").GetComponent<SpriteRenderer>().bounds.size.x;
             if (distance <= spriteSize/2)
             {
-                Debug.Log("Building cannot be that close to an other building");
                 DebugPanel.displayDebugMessage("Building cannot be that close to an other building");
+                if (this.Owner is Client client)
+                {
+                    client.createTowerEvent(towerName);
+                }
                 return;
             }
         }
@@ -129,8 +138,11 @@ public class Castle : AttackingEntity
         // Check if not too close to castle
         if (Vector2.Distance(spawnPosition, this.transform.position) < Range)
         {
-            Debug.Log("Building cannot be that close to your castle");
             DebugPanel.displayDebugMessage("Building cannot be that close to your castle");
+            if (this.Owner is Client client)
+            {
+                client.createTowerEvent(towerName);
+            }
             return;
         }
 
@@ -138,8 +150,11 @@ public class Castle : AttackingEntity
         Vector3Int flooredSpawnPosition = Vector3Int.FloorToInt(spawnPosition);
         if(obstacleTilemap.GetTile(flooredSpawnPosition) != null)
         {
-            Debug.Log("Cannot place building in a wall");
             DebugPanel.displayDebugMessage("Cannot place building in a wall");
+            if (this.Owner is Client client)
+            {
+                client.createTowerEvent(towerName);
+            }
             return;
         }
 
@@ -171,8 +186,12 @@ public class Castle : AttackingEntity
         }
         else
         {
-            Debug.Log("Not enough gold, this tower costs: " + cost);
             DebugPanel.displayDebugMessage("Not enough gold, this tower costs: " + cost);
+            if (this.Owner is Client client)
+            {
+                client.createTowerEvent(towerName);
+            }
+            return;
         }
     }
 
@@ -287,7 +306,11 @@ public class Castle : AttackingEntity
         }
         else
         {
-            Debug.Log("Not enough gold, this troop costs: " + cost);
+            DebugPanel.displayDebugMessage("Not enough gold, this troop costs: " + cost);
+            if(this.Owner is Client client)
+            {
+                client.createTroopEvent(troopName);
+            }
         }
     }
 
@@ -552,15 +575,12 @@ public class Castle : AttackingEntity
     public override Dictionary<string, object> getEntityInfo()
     {
         Dictionary<string, object> result = new Dictionary<string, object>();
-        result.Add("Name", this.name);
+        result.Add("Name", "Castle");
+        result.Add("Health", this.Health);
+        result.Add("Cost", this.Cost);
         result.Add("Damage", this.Damage);
         result.Add("AttackCooldown", this.AttackCooldown);
         result.Add("Range", this.Range);
-        result.Add("CurrentEntityState", this.CurrentEntityState.ToString());
-        if (this.CurrentEntityState == EntityState.Attacking)
-        {
-            result.Add("CurrentTarget", this.CurrentTarget.ToString());
-        }
         return result;
     }
 

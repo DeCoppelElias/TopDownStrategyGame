@@ -72,6 +72,7 @@ public class CameraMovement : MonoBehaviour
         // Move speed changes is lower when zoomed in
         int currentMoveSpeed = cameraMoveSpeed;
         if (BoundedZoom) currentMoveSpeed = (int)(currentMoveSpeed * (targetZoom / maxZoom));
+        currentMoveSpeed = Mathf.Clamp(currentMoveSpeed, (int)(cameraMoveSpeed / 1.5f), cameraMoveSpeed);
 
         // Get movement
         Vector3 movement = new Vector3(0, 0, 0);

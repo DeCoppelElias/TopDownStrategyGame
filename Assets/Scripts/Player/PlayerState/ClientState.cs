@@ -16,4 +16,6 @@ public abstract class ClientState
     /// Each client state must implement this method. This method will be called on the client every frame
     /// </summary>
     public abstract void action();
+
+    public abstract void onExitState();
 }

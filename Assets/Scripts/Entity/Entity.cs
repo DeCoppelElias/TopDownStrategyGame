@@ -61,4 +61,14 @@ public abstract class Entity : NetworkBehaviour
     /// <param name="oldPlayer"></param> The old owner client, should always be null
     /// <param name="newPlayer"></param> The new owner client
     protected abstract void updateOwnerClientEventSpecific();
+
+    public bool isVisible()
+    {
+        if (this is Troop troop)
+        {
+            if (troop._owner.isLocalPlayer || troop.GlobalVisibility) return true;
+            return false;
+        }
+        else return true;
+    }
 }

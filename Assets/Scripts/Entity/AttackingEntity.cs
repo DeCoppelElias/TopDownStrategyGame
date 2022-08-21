@@ -15,6 +15,7 @@ public abstract class AttackingEntity : Entity
     public float Range { get => _range; }
 
     public enum EntityState { Normal, WalkingToTarget, Attacking }
+
     [SyncVar]
     [SerializeField]
     protected EntityState _currentEntityState = EntityState.Normal;

@@ -30,6 +30,7 @@ public class ClientStateManager
     /// </summary>
     public void toViewingState()
     {
+        _currentClientState.onExitState();
         _currentClientState = _clientStates[0];
         this.Client.displayViewingUi();
     }
@@ -39,6 +40,7 @@ public class ClientStateManager
     /// </summary>
     public void toDrawPathState()
     {
+        _currentClientState.onExitState();
         _currentClientState = _clientStates[1];
         this.Client.displayDrawPathUi();
     }
@@ -49,6 +51,7 @@ public class ClientStateManager
     /// <param name="target"></param> a string representing the type of target
     public void toSelectEntityState(string target)
     {
+        _currentClientState.onExitState();
         _currentClientState = _clientStates[2];
         ((SelectEntityState)_currentClientState).target = target;
     }
@@ -58,6 +61,7 @@ public class ClientStateManager
     /// </summary>
     public void toSelectPositionState()
     {
+        _currentClientState.onExitState();
         _currentClientState = _clientStates[3];
         this.Client.displaySelectPositionUi();
     }
@@ -68,8 +72,8 @@ public class ClientStateManager
     /// <param name="path"></param>
     public void sendPathToPlayer(List<Vector2> path)
     {
-        Client.createSelectedTroop(path);
         toViewingState();
+        Client.createSelectedTroop(path);
     }
 
     /// <summary>

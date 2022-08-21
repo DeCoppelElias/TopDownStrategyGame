@@ -62,11 +62,13 @@ public class LevelSceneUi : MonoBehaviour
     public void displayDrawPathUi()
     {
         drawPathUi.SetActive(true);
+        selectPositionUi.SetActive(false);
     }
 
     public void displaySelectPositionUi()
     {
         selectPositionUi.SetActive(true);
+        drawPathUi.SetActive(false);
     }
 
     public void displayViewingUi()
@@ -89,9 +91,12 @@ public class LevelSceneUi : MonoBehaviour
     }
     public void activateInGameUi()
     {
+        disableAllUi();
         client.changeGameState("Normal");
-        optionsUi.SetActive(false);
         inGameUi.SetActive(true);
+
+        troopScrollView.SetActive(false);
+        towerScrollView.SetActive(false);
     }
 
     public void activateOptionsUi()
@@ -170,7 +175,6 @@ public class LevelSceneUi : MonoBehaviour
 
     public void createTroop(string troopName)
     {
-        client.toDrawPathState();
         /*client.changeClientState("ViewingState");
         activateTroopMethodUi();*/
         client.createTroopEvent(troopName);

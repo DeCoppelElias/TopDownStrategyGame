@@ -9,4 +9,9 @@ public class ViewingState : ClientState
     {
         
     }
+
+    public override void onExitState()
+    {
+        
+    }
 }

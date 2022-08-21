@@ -281,22 +281,57 @@ public class Client : Player
     {
         if (clientStateManager == null) return;
         clientStateManager.stateActions();
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             uiManager.activateOptionsUi();
         }
-        if (Input.GetMouseButtonDown(0))
+
+        else if (Input.GetMouseButtonDown(0))
         {
             Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Collider2D[] colliders = Physics2D.OverlapCircleAll(mousePosition, 1);
             foreach (Collider2D collider in colliders)
             {
                 Entity entity = collider.GetComponent<Entity>();
-                if (entity != null)
-                {
-                    entity.detectClick();
-                }
+                if (entity != null && entity.isVisible()) entity.detectClick();
             }
+        }
+
+        else if (Input.GetMouseButtonDown(1))
+        {
+            clientStateManager.toViewingState();
+        }
+
+
+        else if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+        {
+            createTroopEvent("SwordManTroop");
+        }
+
+        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+        {
+            createTroopEvent("HorseRiderTroop");
+        }
+
+        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+        {
+            createTroopEvent("ArcherTroop");
+        }
+
+        else if (Input.GetKeyDown(KeyCode.Alpha4) || Input.GetKeyDown(KeyCode.Keypad4))
+        {
+            createTowerEvent("ArcherTower");
+        }
+
+        else if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5))
+        {
+            createTowerEvent("CannonTower");
+        }
+
+        else if (Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6))
+        {
+            createTowerEvent("MeleeTower");
         }
     }
 
@@ -307,6 +342,7 @@ public class Client : Player
     [Client]
     public void createTowerEvent(string towerName)
     {
+        this.uiManager.displayTowerInfo(towerName);
         selectedTower = towerName;
         toSelectPositionState();
     }
@@ -318,6 +354,8 @@ public class Client : Player
     [Client]
     public void createTroopEvent(string troopName)
     {
+        this.uiManager.displayTroopInfo(troopName);
+        toDrawPathState();
         selectedTroop = troopName;
     }
 
@@ -435,5 +473,12 @@ public class Client : Player
     {
         if (troop == null || client == null) return;
         this.server.setTroopVisibilityForClient(client.connectionToClient, troop.gameObject, newVisibility);
+    }
+
+    [Command]
+    public void attackingAnimationSync(GameObject troop, bool attacking)
+    {
+        Server levelSceneServer = GameObject.Find("Server").GetComponent<Server>();
+        levelSceneServer.attackingAnimationSync(troop, attacking);
     }
 }

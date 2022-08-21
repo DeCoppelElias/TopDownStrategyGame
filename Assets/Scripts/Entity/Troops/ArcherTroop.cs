@@ -5,4 +5,15 @@ using Mirror;
 
 public class ArcherTroop : Troop
 {
+    public override Dictionary<string, object> getEntityInfo()
+    {
+        Dictionary<string, object> result = new Dictionary<string, object>();
+        result.Add("Name", "Archer");
+        result.Add("Health", this.Health);
+        result.Add("Cost", this.Cost);
+        result.Add("Damage", this.Damage);
+        result.Add("AttackCooldown", this.AttackCooldown);
+        result.Add("Range", this.Range);
+        return result;
+    }
 }

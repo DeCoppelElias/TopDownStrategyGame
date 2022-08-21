@@ -42,4 +42,9 @@ public class SelectEntityState : ClientState
             Debug.Log("No entity found, please try again");
         }
     }
+
+    public override void onExitState()
+    {
+        
+    }
 }

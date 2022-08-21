@@ -46,7 +46,7 @@ public class DrawPathState : ClientState
         this.path = new List<Vector2>();
         lineRenderer.gameObject.SetActive(true);
 
-        Debug.Log("Starting to draw at position" + position);
+        //Debug.Log("Starting to draw at position" + position);
         Vector2 castlePosition = clientStateManager.getCastlePosition();
         if (Vector2.Distance(position, castlePosition) < 1)
         {
@@ -58,7 +58,7 @@ public class DrawPathState : ClientState
         else
         {
             DebugPanel.displayDebugMessage("Path must start at your castle");
-            Debug.Log("Path must start at your castle, please try again");
+            //Debug.Log("Path must start at your castle, please try again");
         }
     }
 
@@ -83,7 +83,7 @@ public class DrawPathState : ClientState
             }
             else
             {
-                Debug.Log("Path crossed obstacle, please try again");
+                //Debug.Log("Path crossed obstacle, please try again");
                 DebugPanel.displayDebugMessage("Path crossed obstacle, please try again");
                 resetPath();
             }
@@ -136,5 +136,10 @@ public class DrawPathState : ClientState
         mouse = false;
         this.path = new List<Vector2>();
         this.lineRenderer.positionCount = 0;
+    }
+
+    public override void onExitState()
+    {
+        resetPath();
     }
 }

@@ -11,10 +11,10 @@ GameObject:
   - component: {fileID: 3591787106425391005}
   - component: {fileID: 3591787106425391006}
   - component: {fileID: 944166233457865315}
-  - component: {fileID: 3443256801120016028}
   - component: {fileID: 2256591433395396550}
   - component: {fileID: 5404101918201582152}
   - component: {fileID: 8943086982075570962}
+  - component: {fileID: 7430080873883063714}
   m_Layer: 0
   m_Name: MeleeTower
   m_TagString: Untagged
@@ -32,6 +32,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1795778776579723541}
   m_Father: {fileID: 0}
@@ -48,6 +49,7 @@ SpriteRenderer:
   m_CastShadows: 0
   m_ReceiveShadows: 0
   m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
@@ -105,31 +107,6 @@ MonoBehaviour:
   visible: 0
   m_AssetId: 50d47cead38475a47a176e4019f66796
   hasSpawned: 0
---- !u!114 &3443256801120016028
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3591787106425391007}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 031731051aa62944ba6e23176876c2f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  syncMode: 0
-  syncInterval: 0.1
-  _health: 150
-  _owner: {fileID: 0}
-  _serverClient: {fileID: 0}
-  _damage: 30
-  _range: 2
-  _currentEntityState: 0
-  _attackCooldown: 1
-  _lastAttack: 0
-  _currentTarget: {fileID: 0}
-  _targetsToAttack: []
-  _cost: 4
 --- !u!50 &2256591433395396550
 Rigidbody2D:
   serializedVersion: 4
@@ -211,6 +188,31 @@ MonoBehaviour:
   showGizmos: 0
   showOverlay: 0
   overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+--- !u!114 &7430080873883063714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3591787106425391007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94599f9ef642495498e95175ad9afe30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncMode: 0
+  syncInterval: 0.1
+  _health: 300
+  _owner: {fileID: 0}
+  _serverClient: {fileID: 0}
+  _damage: 30
+  _range: 2
+  _currentEntityState: 0
+  _attackCooldown: 1
+  _lastAttack: 0
+  _currentTarget: {fileID: 0}
+  _targetsToAttack: []
+  _cost: 4
 --- !u!1001 &392167793530397885
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -221,6 +223,10 @@ PrefabInstance:
     - target: {fileID: 314340021441773713, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
       propertyPath: m_Name
       value: AttackRing
+      objectReference: {fileID: 0}
+    - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
+      propertyPath: m_RootOrder
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
       propertyPath: m_LocalPosition.x
@@ -235,6 +241,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
       propertyPath: m_LocalRotation.x
       value: -0
       objectReference: {fileID: 0}
@@ -245,14 +255,6 @@ PrefabInstance:
     - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
       propertyPath: m_LocalRotation.z
       value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
-      propertyPath: m_RootOrder
-      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2133195286636541352, guid: 2f5f000a86e37024baeb094345b6ccf1, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

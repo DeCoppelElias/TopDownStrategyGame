@@ -19,4 +19,9 @@ public class SelectPositionState : ClientState
             //Debug.Log("clicked position: " + position);
         }
     }
+
+    public override void onExitState()
+    {
+        
+    }
 }
