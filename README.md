@@ -21,7 +21,7 @@ Spawn Towers: 4,5,6
 # Things I'm proud of / Things I learned
 - The Multiplayer:
 This is my first multiplayer game, so it was really hard to implement it. I used Mirror Networking for this (website: https://mirror-networking.com/).
-Implementing multiplayer was really frustrating because, in my opinion, there was too little documentation and tutorials for everything. This made it really hard to understand certain concepts (ex. Client Server interactions with [Command], [ClientRpc], etc.). Debugging was also really hard. To debug the multiplayer, I had to run 2 different Unity Editors to test it. My pc isn't fast, so sometimes it would take ages before I found a bug. Now that I understand the concepts more I can safely say that implementing my next multiplayer game will go much smoother. It was just really hard to learn the basics by myself.   
+Implementing multiplayer was really frustrating because, in my opinion, there was too little documentation and tutorials for everything. This made it really hard to understand certain concepts (ex. Client Server interactions with [Command], [ClientRpc], etc.). Debugging was also really hard. To debug the multiplayer, I had to run 2 different Unity Editors to test it. My pc isn't fast, so sometimes it would take ages before I found a bug. Now that I understand the concepts more, I can safely say that implementing my next multiplayer game will go much smoother. It was just really hard to learn the basics by myself.   
 
 - The Level Creator:
 The Level Creator was not easy to implement. I used a couple design patterns to make it as expandable and understandable possible.
