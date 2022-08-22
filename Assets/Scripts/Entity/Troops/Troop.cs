@@ -142,15 +142,11 @@ public abstract class Troop : AttackingEntity
         Vector3 vectorToTarget = targetLocation - myLocation;
         if (vectorToTarget.x > 0)
         {
-            Vector3 scale = transform.localScale;
-            scale.x = -1;
-            transform.localScale = scale;
+            localScale = new Vector3(-1, 1, 1);
         }
         else
         {
-            Vector3 scale = transform.localScale;
-            scale.x = 1;
-            transform.localScale = scale;
+            localScale = new Vector3(1, 1, 1);
         }
     }
 

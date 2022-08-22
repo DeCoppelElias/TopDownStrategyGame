@@ -52,6 +52,9 @@ public class SaveLevel : MonoBehaviour
     // Frame end
     private WaitForEndOfFrame frameEnd = new WaitForEndOfFrame();
 
+    // Observers
+    private List<SaveLevelObserver> observers = new List<SaveLevelObserver>();
+
     private void Start()
     {
         // UI
@@ -292,6 +295,9 @@ public class SaveLevel : MonoBehaviour
 
                 Camera.main.transform.position = oldCameraPosition;
                 Camera.main.orthographicSize = oldCameraOrthographicSize;
+                CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
+                cameraMovement.ZoomableCamera = true;
+                cameraMovement.MovableCamera = true;
 
                 savingStep++;
                 this.savingState = SavingState.SavingFinished;
@@ -306,6 +312,7 @@ public class SaveLevel : MonoBehaviour
 
             else if (savingState == SavingState.BackToIdle)
             {
+                notifyObservers();
                 resetUi();
                 savingStep = 0;
                 levelNameSaved = false;
@@ -385,6 +392,8 @@ public class SaveLevel : MonoBehaviour
 
         normalUi.SetActive(true);
         savingLevelUi.SetActive(false);
+
+        notifyObservers();
     }
 
     /// <summary>
@@ -395,5 +404,21 @@ public class SaveLevel : MonoBehaviour
         if (levelNameText.text.Length == 0) return;
         this.levelName = levelNameText.text;
         levelNameSaved = true;
+    }
+
+    /// <summary>
+    /// Add to observers
+    /// </summary>
+    public void subscribe(SaveLevelObserver observer)
+    {
+        this.observers.Add(observer);
+    }
+
+    private void notifyObservers()
+    {
+        foreach(SaveLevelObserver observer in observers)
+        {
+            observer.notify();
+        }
     }
 }

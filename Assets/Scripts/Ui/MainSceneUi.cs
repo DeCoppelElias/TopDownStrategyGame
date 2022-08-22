@@ -12,6 +12,7 @@ public class MainSceneUi : NetworkBehaviour
     private GameObject selectLevelUi;
     private GameObject hostMultiplayerUi;
     private GameObject mainScreenUi;
+    private GameObject controlsUi;
     private Client client;
     private TMP_InputField inputField;
 
@@ -24,7 +25,19 @@ public class MainSceneUi : NetworkBehaviour
         mainScreenUi = GameObject.Find("MainScreenUi");
         hostMultiplayerUi = GameObject.Find("HostMultiplayerUi");
         inputField = GameObject.Find("AdressInputField").GetComponent<TMP_InputField>();
+        controlsUi = GameObject.Find("ControlsUi");
+        controlsUi.SetActive(false);
         hostMultiplayerUi.SetActive(false);
+    }
+
+    public void displayControlsUi()
+    {
+        controlsUi.SetActive(true);
+    }
+
+    public void exitControlsUi()
+    {
+        controlsUi.SetActive(false);
     }
 
     public void selectMultiplayer()

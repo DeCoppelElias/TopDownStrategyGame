@@ -284,7 +284,7 @@ public class Client : Player
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            uiManager.activateOptionsUi();
+            uiManager.displayOptionsUi();
         }
 
         else if (Input.GetMouseButtonDown(0))

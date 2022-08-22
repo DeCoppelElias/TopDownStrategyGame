@@ -10,7 +10,7 @@ using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 using static AVL;
 
-public class CreateLevelManager : MonoBehaviour
+public class CreateLevelManager : MonoBehaviour, SaveLevelObserver
 {
     // Selected objects
     private Tile selectedTile;
@@ -33,7 +33,7 @@ public class CreateLevelManager : MonoBehaviour
     private SelectingTile customSelectingTile;
 
     // Current building state
-    private enum BuildingState { BuildingTiles, BuildingGameObjects, Viewing, Selecting, Paste, DrawingLine, DrawingRectangle, Fill}
+    private enum BuildingState { BuildingTiles, BuildingGameObjects, Viewing, Selecting, Paste, DrawingLine, DrawingRectangle, Fill, Idle}
     private BuildingState buildingState = BuildingState.Viewing;
 
     // Main Ui Elements
@@ -637,6 +637,9 @@ public class CreateLevelManager : MonoBehaviour
 
         // Instantiating action manager
         this.actionManager = new ActionManager(20, this.undoCountText, this.redoCountText);
+
+        // Subscribing to observers
+        GameObject.Find("SaveLevelManager").GetComponent<SaveLevel>().subscribe(this);
     }
 
     private void Update()
@@ -1855,6 +1858,7 @@ public class CreateLevelManager : MonoBehaviour
     public void saveLevel()
     {
         GameObject.Find("SaveLevelManager").GetComponent<SaveLevel>().saveLevel();
+        this.buildingState = BuildingState.Idle;
     }
 
     public void loadLevel()
@@ -1873,5 +1877,10 @@ public class CreateLevelManager : MonoBehaviour
             resetBasicUi();
             this.levelOptions.SetActive(true);
         }
+    }
+
+    public void notify()
+    {
+        this.buildingState = BuildingState.Viewing;
     }
 }

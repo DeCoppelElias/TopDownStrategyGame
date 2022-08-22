@@ -14,6 +14,7 @@ public class LevelSceneUi : MonoBehaviour
     private GameObject endGameUi;
     private GameObject loadingUi;
     private TMP_Text loadingInfo;
+    private GameObject controlsUi;
 
     private GameObject troopScrollView;
     private GameObject createTroopUi;
@@ -40,6 +41,8 @@ public class LevelSceneUi : MonoBehaviour
         selectPositionUi = GameObject.Find("SelectPositionStateUi");
         loadingUi = GameObject.Find("LoadingUi");
         loadingInfo = GameObject.Find("LoadingStatus").GetComponent<TMP_Text>();
+        controlsUi = GameObject.Find("ControlsUi");
+        controlsUi.SetActive(false);
         selectPositionUi.SetActive(false);
         drawPathUi.SetActive(false);
         towerScrollView.SetActive(false);
@@ -47,6 +50,16 @@ public class LevelSceneUi : MonoBehaviour
         endGameUi.SetActive(false);
         optionsUi.SetActive(false);
         inGameUi.SetActive(false);
+    }
+
+    public void exitControls()
+    {
+        controlsUi.SetActive(false);
+    }
+
+    public void displayControlsUi()
+    {
+        controlsUi.SetActive(true);
     }
 
     public void setupStartGameUi()
@@ -75,6 +88,7 @@ public class LevelSceneUi : MonoBehaviour
     {
         drawPathUi.SetActive(false);
         selectPositionUi.SetActive(false);
+        GameObject.Find("InfoPanel").GetComponent<InfoPanel>().Hide();
     }
 
     public void displayGold(int gold, int maxGold)
@@ -88,6 +102,7 @@ public class LevelSceneUi : MonoBehaviour
         optionsUi.SetActive(false);
         inGameUi.SetActive(false);
         loadingUi.SetActive(false);
+        controlsUi.SetActive(false);
     }
     public void activateInGameUi()
     {
@@ -99,7 +114,7 @@ public class LevelSceneUi : MonoBehaviour
         towerScrollView.SetActive(false);
     }
 
-    public void activateOptionsUi()
+    public void displayOptionsUi()
     {
         client.changeGameState("Pause");
         optionsUi.SetActive(true);

@@ -150,7 +150,7 @@ public class PathFinding : MonoBehaviour
     /// <param name="start"></param>
     /// <param name="finish"></param>
     /// <returns></returns>
-    public List<Vector2> findShortestPath(Vector3Int start, Vector3Int finish, Dictionary<Vector3Int, string> virtualObstacles = null, int maxCounter = 10000)
+    public List<Vector2> findShortestPath(Vector3Int start, Vector3Int finish, Dictionary<Vector3Int, string> virtualObstacles = null, int maxCounter = 100000)
     {
         // Reset previous display
         if (display) displayTilemap.ClearAllTiles();
@@ -211,6 +211,7 @@ public class PathFinding : MonoBehaviour
             }
             // Get next node depending on: distance from start + distance to finish
             currentNode = (PathFindingNode)avlTree.PopMinValue();
+            if(currentNode == null) return null;
             expandedNodes.Add(currentNode.GetHashCode(), 0);
             storedNodes.Remove(currentNode.GetHashCode());
 

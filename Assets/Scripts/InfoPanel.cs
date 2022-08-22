@@ -30,13 +30,13 @@ public class InfoPanel : MonoBehaviour
         infoPanel.GetComponent<InfoPanel>().lastShown = Time.time;
     }
 
-    private void Hide()
+    public void Hide()
     {
         this.GetComponent<CanvasGroup>().alpha = 0f; //this makes everything transparent
         this.GetComponent<CanvasGroup>().blocksRaycasts = false; //this prevents the UI element to receive input events
     }
 
-    private void Show()
+    public void Show()
     {
         this.GetComponent<CanvasGroup>().alpha = 1f;
         this.GetComponent<CanvasGroup>().blocksRaycasts = true;
