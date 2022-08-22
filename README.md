@@ -35,13 +35,17 @@ You can freely use this code but please mention me. Thank You!
 
 
 - The Pathfinding:  
-      For the Pathfinding I implemented the A* algorithm. This was harder than expected because I couldn't find a good implementation of a balanced tree. Because of this I used an AVL tree from a website () and had to rewrite everything except the balancing. I did however learn a lot about balanced trees thanks to this.   
+      For the Pathfinding I implemented the A* algorithm. This was harder than expected because I couldn't find a good implementation of a balanced tree. Because of this I used an AVL tree from a website (https://simpledevcode.wordpress.com/2014/09/16/avl-tree-in-c/) and had to rewrite everything except the balancing. I did however learn a lot about balanced trees thanks to this.   
       I also impelented a method for creating semi-random paths. This is currently used by the Ai so they don't use the same path each time. I implemented this by creating additional random virtual obstacles and then searching the shortest path. The virtual obstacles are random so each Troop will have a different path.   
       Lastly I made it possible to visualize the pathfinding for debugging and satisfying reasons.  
 
 
+- The full system:
+      I'm proud of the system I implemented. It is not perfect but I think it's expandable and understandable. I'm planning on improving it and adding better/more documentation.  
+
+
 - The graphical design:   
       I have no background in drawing or graphical design but I still think the game looks pretty nice. I drew every sprite and animation myself.   
-      I used a free drawing application call Krita (here's their website: https://krita.org/en/).   
+      I used a free drawing application called Krita (website: https://krita.org/en/).   
 
 
