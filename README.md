@@ -1,5 +1,5 @@
 # Castle Defense
-Castle Defense is a top-down strategy game where the goal is to destroy all enemy castles and be the last castle standing. The main defining game feature is that you can draw the path your troops will follow. If you use this correctly, you can evade enemy troops or towers. You can freely use this code, but please mention me. Thank You!   
+Castle Defense is a top-down strategy game where the goal is to destroy all enemy castles and be the last castle standing. The main defining game feature is that you can draw the path your troops will follow. If you use this correctly, you can evade enemy troops or towers. This game was fully made with Unity, if you download the files you can edit and play with it yourself. You can freely use this code, but please mention me. Thank You!   
 
 # Features
 - Singleplayer against AI   
