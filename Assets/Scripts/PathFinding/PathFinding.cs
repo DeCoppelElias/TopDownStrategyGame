@@ -344,7 +344,6 @@ public class PathFinding : MonoBehaviour
         }
         return virtualObstacles;
     }
-
     private Dictionary<Vector3Int, string> generateVirtualObstaclesPath(List<Vector2> path, int size, int frequency, float chance, bool display = false, bool clear = true)
     {
         if (frequency == 0) return null;
