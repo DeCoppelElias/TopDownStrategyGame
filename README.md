@@ -9,8 +9,8 @@ You can freely use this code but please mention me. Thank You!
 - Level Creator
 
 # Controls
-Move Camera: Arrow Keys or WASD
-Settings: ESC
-Spawn Troops: 1,2,3
-Spawn Towers: 4,5,6
+Move Camera: Arrow Keys or WASD  
+Settings: ESC  
+Spawn Troops: 1,2,3  
+Spawn Towers: 4,5,6  
 
