@@ -110,6 +110,13 @@ public class SaveLevel : MonoBehaviour
                 this.loadingBar.value = 0;
 
                 this.savingStep = 0;
+
+                if (!Directory.Exists(Application.persistentDataPath + "/Levels/"))
+                {
+                    //if it doesn't, create it
+                    Directory.CreateDirectory(Application.persistentDataPath + "/Levels/");
+
+                }
                 writer = new StreamWriter(Application.persistentDataPath + "/Levels/" + levelName + ".txt", false);
 
                 this.savingState = SavingState.SavingCastles;
@@ -222,19 +229,14 @@ public class SaveLevel : MonoBehaviour
                 float levelHeight = topRight.y - bottomLeft.y;
                 float levelWidth = topRight.x - bottomLeft.x;
 
-                float newOrthographicSizeNormalScreen = 0;
-                float newOrthographicSizeAdjusted = 0;
 
-                if (levelHeight > levelWidth)
-                {
-                    newOrthographicSizeNormalScreen = levelHeight / 2;
-                    newOrthographicSizeAdjusted = newOrthographicSizeNormalScreen * ((float)Screen.height / height);
-                }
-                else
-                {
-                    newOrthographicSizeNormalScreen = (levelWidth / 2) * ((float)Screen.height / Screen.width);
-                    newOrthographicSizeAdjusted = newOrthographicSizeNormalScreen * ((float)Screen.width / width);
-                }
+                float newOrthographicSizeNormalScreenWidth = levelHeight / 2;
+                float newOrthographicSizeAdjustedWidth = newOrthographicSizeNormalScreenWidth * ((float)Screen.height / height);
+
+                float newOrthographicSizeNormalScreenHeight = (levelWidth / 2) * ((float)Screen.height / Screen.width);
+                float newOrthographicSizeAdjustedHeight = newOrthographicSizeNormalScreenHeight * ((float)Screen.width / width);
+
+                float newOrthographicSizeAdjusted = Mathf.Min(newOrthographicSizeAdjustedWidth, newOrthographicSizeAdjustedHeight);
 
                 CameraMovement cameraMovement = Camera.main.GetComponent<CameraMovement>();
                 cameraMovement.ZoomableCamera = false;

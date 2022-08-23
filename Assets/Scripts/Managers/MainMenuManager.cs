@@ -71,8 +71,12 @@ public class MainMenuManager : MonoBehaviour
         GameObject castlePrefab = (GameObject)Resources.Load("Prefabs/BuildablePrefabs/PlayerCastle");
         GameObject castleContainer = GameObject.Find("Castles");
 
+        // Finding first castle position
+        Vector3 leftMiddleScreen = new Vector3(0 + (Screen.width / 10), Screen.height / 2, 10);
+        Vector3 leftMiddle = Camera.main.ScreenToWorldPoint(leftMiddleScreen);
+
         // Setting up first castle
-        GameObject castle1GameObject = Instantiate(castlePrefab, new Vector3(-30, 0, 0), Quaternion.identity, castleContainer.transform);
+        GameObject castle1GameObject = Instantiate(castlePrefab, leftMiddle, Quaternion.identity, castleContainer.transform);
         NetworkServer.Spawn(castle1GameObject);
         Castle castle1 = castle1GameObject.GetComponent<Castle>();
         GameObject ai1 = Instantiate(aiPrefab);
@@ -86,8 +90,12 @@ public class MainMenuManager : MonoBehaviour
         aiClients.Add(aiClient1);
         castles.Add(castle1);
 
+        // Finding second castle position
+        Vector3 rightMiddleScreen = new Vector3(Screen.width - (Screen.width / 10), Screen.height / 2, 10);
+        Vector3 rightMiddle = Camera.main.ScreenToWorldPoint(rightMiddleScreen);
+
         // Setting up second castle
-        GameObject castle2GameObject = Instantiate(castlePrefab, new Vector3(30, 0, 0), Quaternion.identity, castleContainer.transform);
+        GameObject castle2GameObject = Instantiate(castlePrefab, rightMiddle, Quaternion.identity, castleContainer.transform);
         NetworkServer.Spawn(castle2GameObject);
         Castle castle2 = castle2GameObject.GetComponent<Castle>();
         GameObject ai2 = Instantiate(aiPrefab);

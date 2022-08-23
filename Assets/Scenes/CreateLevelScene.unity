@@ -4101,9 +4101,13 @@ MonoBehaviour:
   _movableCamera: 1
   _zoomableCamera: 1
   zoomSpeed: 20
-  minZoom: 1
+  minZoom: 0
   maxZoom: 200
   cameraMoveSpeed: 10
+  cameraMax_x: 0
+  cameraMax_y: 0
+  cameraMin_x: 0
+  cameraMin_y: 0
 --- !u!1 &733325941
 GameObject:
   m_ObjectHideFlags: 0

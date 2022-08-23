@@ -371,7 +371,7 @@ public class Server : NetworkBehaviour
         byte[] bytes = Encoding.ASCII.GetBytes(levelInfo);
 
         // Amount of bytes that are send every frame
-        int n = 20000;
+        int n = 30000;
 
         // Last part of the string will be send
         if (levelInfoByteCounter + n > bytes.Length)

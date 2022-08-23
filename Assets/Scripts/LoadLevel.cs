@@ -30,6 +30,8 @@ public class LoadLevel : MonoBehaviour
     private Slider loadingBar;
     private TMP_Text levelNameText;
 
+    private TMP_Text debugText;
+
     // Tilemaps
     private Tilemap wallTilemap;
     private Tilemap floorTilemap;
@@ -320,17 +322,31 @@ public class LoadLevel : MonoBehaviour
     /// <returns></returns>
     public string getLevelInfoString(string levelName)
     {
+        // Official Level
         try
-        {
-            string s = File.ReadAllText(Application.persistentDataPath + "/Levels/" + levelName);
-            return s;
-        }
-        catch
         {
             UnityEngine.Object officialLevelTxtFile = Resources.Load("Levels/" + levelName);
             TextAsset textAsset = (TextAsset)officialLevelTxtFile;
             string s = textAsset.text.Replace("\r", "");
             return s;
+        }
+        catch
+        {
+            // Custom Level
+            try
+            {
+                string s = File.ReadAllText(Application.persistentDataPath + "/Levels/" + levelName);
+                return s;
+            }
+            catch(Exception e)
+            {
+                if(debugText != null)
+                {
+                    debugText.text = e.Message + "\n";
+                    debugText.text += e.StackTrace;
+                }
+                return "";
+            }
         }
     }
 

@@ -1859,11 +1859,15 @@ public class CreateLevelManager : MonoBehaviour, SaveLevelObserver
     {
         GameObject.Find("SaveLevelManager").GetComponent<SaveLevel>().saveLevel();
         this.buildingState = BuildingState.Idle;
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
     }
 
     public void loadLevel()
     {
         GameObject.Find("LoadLevelManager").GetComponent<LoadLevel>().loadLevel();
+        this.previewTilemap.ClearAllTiles();
+        this.selectingTilemap.ClearAllTiles();
     }
 
     public void OnClickLevelOptions()

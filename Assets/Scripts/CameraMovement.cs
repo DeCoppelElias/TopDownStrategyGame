@@ -30,13 +30,19 @@ public class CameraMovement : MonoBehaviour
     [SerializeField]
     private float maxZoom = 40;
 
+    private bool setup = false;
+
 
     [SerializeField]
     private int cameraMoveSpeed = 10;
 
+    [SerializeField]
     private float cameraMax_x = 0;
+    [SerializeField]
     private float cameraMax_y = 0;
+    [SerializeField]
     private float cameraMin_x = 0;
+    [SerializeField]
     private float cameraMin_y = 0;
 
     private Vector2 bottomLeft;
@@ -44,14 +50,20 @@ public class CameraMovement : MonoBehaviour
 
     void Update()
     {
-        if (MovableCamera)
+        if((BoundedMovement && setup) || !BoundedMovement)
         {
-            moveCamera();
+            if (MovableCamera)
+            {
+                moveCamera();
+            }
         }
-
-        if (ZoomableCamera)
+        
+        if((BoundedZoom && setup) || !BoundedZoom)
         {
-            zoomCamera();
+            if (ZoomableCamera)
+            {
+                zoomCamera();
+            }
         }
     }
 
@@ -60,8 +72,15 @@ public class CameraMovement : MonoBehaviour
     /// </summary>
     public void setupCameraBounds()
     {
-        if (BoundedMovement) setCameraBounds();
-        targetZoom = maxZoom;
+        if (BoundedMovement)
+        {
+            // Finding borders of level and storing them
+            setCameraBounds();
+
+            // Creating the max possible zoom without showing empty space
+            createMaxZoom();
+        }
+        setup = true;
     }
 
     /// <summary>
@@ -108,7 +127,10 @@ public class CameraMovement : MonoBehaviour
     /// </summary>
     private void zoomCamera()
     {
-        // If over Ui element don't zoom
+        // Move camera to target zoom
+        Camera.main.orthographicSize = Mathf.Lerp(Camera.main.orthographicSize, targetZoom, Time.deltaTime * 5);
+
+        // If over Ui element don't take input
         if (EventSystem.current.IsPointerOverGameObject()) return;
 
         // Check if scrolling
@@ -120,7 +142,7 @@ public class CameraMovement : MonoBehaviour
         if (targetZoom < 0) targetZoom = 0;
 
         // Change zoom
-        setZoomSubtle(targetZoom);
+        if(scrollData != 0) setZoomSubtle(targetZoom);
     }
 
     /// <summary>
@@ -143,12 +165,22 @@ public class CameraMovement : MonoBehaviour
         Vector2 decoTopRight = decorationTilemap.localBounds.center + decorationTilemap.localBounds.extents;
 
         int minX = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.x, floorBottomLeft.x), decoBottomLeft.x));
+        int maxX = (int)Math.Floor(Math.Max(Math.Max(wallTopRight.x, floorTopRight.x), decoTopRight.x));
+        if(minX + 2 <= maxX)
+        {
+            minX += 1;
+            maxX -= 1;
+        }
+
         int minY = (int)Math.Floor(Math.Min(Math.Min(wallBottomLeft.y, floorBottomLeft.y), decoBottomLeft.y));
+        int maxY = (int)Math.Floor(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
+        if (minY + 2 <= maxY)
+        {
+            minY += 1;
+            maxY -= 1;
+        }
 
-        int maxX = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.x, floorTopRight.x), decoTopRight.x));
-        int maxY = (int)Math.Ceiling(Math.Max(Math.Max(wallTopRight.y, floorTopRight.y), decoTopRight.y));
-
-        Vector2 bottomLeft = new Vector2(minX - 1, minY - 1);
+        Vector2 bottomLeft = new Vector2(minX, minY);
         Vector2 topRight = new Vector2(maxX, maxY);
 
         return (bottomLeft, topRight);
@@ -163,9 +195,6 @@ public class CameraMovement : MonoBehaviour
         (Vector2, Vector2) tuple = findBorders();
         this.bottomLeft = tuple.Item1;
         this.topRight = tuple.Item2;
-
-        createMaxZoom();
-        refreshCameraBounds();
     }
 
     /// <summary>
@@ -176,10 +205,23 @@ public class CameraMovement : MonoBehaviour
         if (!BoundedMovement) return;
         float vertExtent = Camera.main.orthographicSize;
         float horzExtent = vertExtent * Screen.width / Screen.height;
-        cameraMax_x = topRight.x - horzExtent - 1;
-        cameraMax_y = topRight.y - vertExtent - 1;
-        cameraMin_x = bottomLeft.x + horzExtent + 2;
-        cameraMin_y = bottomLeft.y + vertExtent + 2;
+        cameraMax_x = topRight.x - horzExtent;
+        cameraMax_y = topRight.y - vertExtent;
+        cameraMin_x = bottomLeft.x + horzExtent;
+        cameraMin_y = bottomLeft.y + vertExtent;
+
+        if(Math.Abs(cameraMax_x - cameraMin_x) < 0.5)
+        {
+            float middle = (cameraMax_x + cameraMin_x) * 0.5f;
+            cameraMax_x = middle;
+            cameraMin_x = middle;
+        }
+        if (Math.Abs(cameraMax_y - cameraMin_y) < 0.5)
+        {
+            float middle = (cameraMax_y + cameraMin_y) * 0.5f;
+            cameraMax_y = middle;
+            cameraMin_y = middle;
+        }
     }
 
     /// <summary>
@@ -187,10 +229,13 @@ public class CameraMovement : MonoBehaviour
     /// </summary>
     private void createMaxZoom()
     {
-        float distX = (this.topRight.x - this.bottomLeft.x) * 0.5f;
-        float distY = (this.topRight.y - this.bottomLeft.y) * 0.5f;
-        float dist = Mathf.Max(distX, distY);
-        float maxZoom = (dist * Screen.height / Screen.width) - 5;
+        float levelWidth = (float)(this.topRight.x - this.bottomLeft.x) * 0.5f;
+        float levelHeight = (float)(this.topRight.y - this.bottomLeft.y) * 0.5f;
+
+        float zoomX = levelWidth * (float)Screen.height / Screen.width;
+        float zoomY = levelHeight;
+
+        float maxZoom = Mathf.Min(zoomX, zoomY);
         setMaxZoom(maxZoom);
     }
 
@@ -200,9 +245,8 @@ public class CameraMovement : MonoBehaviour
     /// <param name="zoom"></param>
     public void setMaxZoom(float zoom)
     {
-        Camera.main.orthographicSize = zoom;
         this.maxZoom = zoom;
-        refreshCameraBounds();
+        setZoom(zoom);
     }
 
     /// <summary>
@@ -212,7 +256,6 @@ public class CameraMovement : MonoBehaviour
     private void setZoomSubtle(float zoom)
     {
         targetZoom = zoom;
-        Camera.main.orthographicSize = Mathf.Lerp(Camera.main.orthographicSize, zoom, Time.deltaTime * 5);
         refreshCameraBounds();
     }
 
